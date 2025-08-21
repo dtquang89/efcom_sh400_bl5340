@@ -19,7 +19,7 @@ command:
 ```shell
 # initialize efcom-workspace for the application (main branch)
 # depends on your setup, you would need to have a token in order to clone the repo
-west init -m https://github.com/dtquang89/efcom_sh400_bl5340 --mr main efcom_workspace
+west init -m https://github.com/dtquang89/efcom_sh400_bl5340 --mr develop efcom_workspace
 # update Zephyr modules
 cd efcom_sh400_bl5340
 west update
