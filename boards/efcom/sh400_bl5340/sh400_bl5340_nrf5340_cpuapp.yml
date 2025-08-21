@@ -1,0 +1,20 @@
+identifier: sh400_bl5340/nrf5340/cpuapp
+name: SH-400 Board based on BL5340
+vendor: efcom
+type: mcu
+arch: arm
+ram: 448
+flash: 1024
+toolchain:
+  - gnuarmemb
+  - zephyr
+supported:
+  - counter
+  - gpio
+  - i2c
+  - pwm
+  - qspi
+  - spi
+  - uart
+  - usb_device
+  - watchdog

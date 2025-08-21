@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+title: Analog Devices MAX31341C Real-Time Clock (RTC), I2C
+description: |
+  Device binding for the MAX31341C RTC (Real-Time Clock) on an I²C bus.
+  Supports features such as alarms, trickle-charger, external clock input.
+  Based on the MAX31341B/MAX31341C datasheet.
+
+compatible: "adi,max31341"
+
+include: i2c-device.yaml
+
+properties:
+  reg:
+    required: true
+
+  int-gpios:
+    type: phandle-array
+    description: |
+      Host input connected to the MAX31341C open drain output pin
+      Notifies when an alarm has triggered by asserting this line.

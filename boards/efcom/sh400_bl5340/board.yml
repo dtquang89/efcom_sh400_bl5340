@@ -1,0 +1,8 @@
+board:
+  name: sh400_bl5340
+  vendor: efcom
+  socs:
+  - name: nrf5340
+    variants:
+    - name: ns
+      cpucluster: cpuapp
