@@ -1,0 +1,375 @@
+/*
+ * Copyright (c) 2019-2023 Nordic Semiconductor ASA
+ * Copyright (c) 2021-2023 Laird Connectivity
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#include "sh400_bl5340-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+/ {
+	chosen {
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+		zephyr,uart-mcumgr = &uart0;
+        zephyr,bt-mon-uart = &uart0;
+		zephyr,bt-c2h-uart = &uart0;
+		zephyr,bt-hci = &bt_hci_ipc0;
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		codec_irq: codec_irq {
+			gpios = <&gpio0 19 GPIO_ACTIVE_LOW>;
+			label = "Codec Interrupt";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+
+		drc_in_1: drc_in_1 {
+            gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+            label = "Dry contact Input 1";
+        };
+
+		drc_in_2: drc_in_2 {
+            gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+            label = "Dry contact Input 2";
+        };
+
+		sdst: sdst {
+            gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
+            label = "MicroSD card Status";
+        };
+
+		power_good: power_good {
+            gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+            label = "Power source Status";
+        };
+
+		charge_st: charge_st {
+            gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+            label = "Battery Charging Status";
+        };
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led0: led_0 {
+			gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
+			label = "LED Debugging 0";
+		};
+
+        led1: led_1 {
+			gpios = <&gpio0 27 GPIO_ACTIVE_LOW>;
+			label = "LED Debugging 1";
+		};
+
+        led2: led_2 {
+			gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
+			label = "LED Debugging 2";
+		};
+
+        rtc_d1: rtc_d1 {
+            gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+            label = "MAX31341C D1 Pin";
+        };
+
+		aux_en: aux_en {
+            gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
+            label = "AUX Enable Pin";
+        };
+
+		drc_out_1: drc_out_1 {
+            gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+            label = "Dry contact Output 1";
+        };
+
+		drc_out_2: drc_out_2 {
+            gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>;
+            label = "Dry contact Output 2";
+        };
+
+		spk_en: spk_en {
+            gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;
+            label = "Speaker activation pin";
+        };
+	};
+
+    pwmleds {
+		compatible = "pwm-leds";
+
+		red_pwm_led: red_pwm_led {
+			pwms = <&pwm0 0 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+		green_pwm_led: green_pwm_led {
+			pwms = <&pwm0 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+		blue_pwm_led: blue_pwm_led {
+			pwms = <&pwm0 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+	};
+
+	voltage_divider {
+        compatible = "voltage-divider";
+
+        io-channels = <&adc 7>; // AIN7
+        output-ohms = <249000>;
+        full-ohms = <(249000 + 100000)>;
+    };
+
+	/* These aliases are provided for compatibility with samples */
+	aliases {
+		led0 = &led0;
+        led1 = &led1;
+        led2 = &led2;
+        pwm-led0 = &green_pwm_led;
+		red-pwm-led = &red_pwm_led;
+		green-pwm-led = &green_pwm_led;
+		blue-pwm-led = &blue_pwm_led;
+        rtc-d1 = &rtc_d1;
+		drc-out-1 = &drc_out_1;
+		drc-out-2 = &drc_out_2;
+		drc-in-1 = &drc_in_1;
+		drc-in-2 = &drc_in_2;
+		aux-en = &aux_en;
+		codec-irq = &codec_irq;
+		sdst = &sdst;
+		power-good = &power_good;
+		charge-st = &charge_st;
+		spk-en = &spk_en;
+	};
+
+};
+
+&vregmain {
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&vregradio {
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&vregh {
+	status = "okay";
+};
+
+&lfxo {
+	load-capacitors = "internal";
+	load-capacitance-picofarad = <7>;
+};
+
+&hfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <13500>;
+};
+
+&adc {
+    status = "okay";
+};
+
+&gpiote {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&i2c1 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+
+	pinctrl-0 = <&i2c1_default>;
+	pinctrl-1 = <&i2c1_sleep>;
+	pinctrl-names = "default", "sleep";
+
+    rt9123_amp: rt9123@1a {
+        compatible = "richtek,rt9123";
+        reg = <0x1A>;
+    };
+
+    max98090_codec: max98090@20 {
+        compatible = "maxim,max98091";
+        reg = <0x20>;
+        mclk-frequency = <13000000>; /* please change according to your application */
+    };
+
+	extrtc0: max31341@d2 {
+        compatible = "adi,max31341";
+        status = "okay";
+        reg = <0xd2>;                  /* I2C address (0xD2) */
+        int-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
+    };
+};
+
+&spi2 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	cs-gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
+
+	pinctrl-0 = <&spi2_default>;
+	pinctrl-1 = <&spi2_sleep>;
+	pinctrl-names = "default", "sleep";
+	
+    sdhc0: sdhc@0 {
+		reg = <0>;
+		compatible = "zephyr,sdhc-spi-slot";
+		status = "okay";
+		spi-max-frequency = <8000000>;
+		mmc {
+			compatible = "zephyr,sdmmc-disk";
+			disk-name = "SD";
+			status = "okay";
+		};
+	};
+};
+
+&uart0 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&pwm0 {
+	status = "okay";
+	pinctrl-0 = <&pwm0_default>;
+	pinctrl-1 = <&pwm0_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&clock {
+	hfclkaudio-frequency = <12288000>;
+};
+
+i2s_rxtx: &i2s0 {
+	status = "okay";
+	pinctrl-0 = <&i2s0_default_alt>;
+	pinctrl-names = "default";
+	clock-source = "ACLK";
+};
+
+dmic_dev: &pdm0 {
+	status = "okay";
+	pinctrl-0 = <&pdm0_default_alt>;
+	pinctrl-names = "default";
+	clock-source = "ACLK";
+};
+
+&qspi {
+	status = "okay";
+	pinctrl-0 = <&qspi_default>;
+	pinctrl-1 = <&qspi_sleep>;
+	pinctrl-names = "default", "sleep";
+	mx25r64: mx25r6435f@0 {
+		compatible = "nordic,qspi-nor";
+		reg = <0>;
+		/* MX25R64 supports only pp and pp4io */
+		writeoc = "pp4io";
+		/* MX25R64 supports all readoc options */
+		readoc = "read4io";
+		sck-frequency = <8000000>;
+		jedec-id = [c2 28 17];
+		sfdp-bfp = [
+			e5 20 f1 ff  ff ff ff 03  44 eb 08 6b  08 3b 04 bb
+			ee ff ff ff  ff ff 00 ff  ff ff 00 ff  0c 20 0f 52
+			10 d8 00 ff  23 72 f5 00  82 ed 04 cc  44 83 68 44
+			30 b0 30 b0  f7 c4 d5 5c  00 be 29 ff  f0 d0 ff ff
+		];
+		size = <67108864>;
+		has-dpd;
+		t-enter-dpd = <10000>;
+		t-exit-dpd = <35000>;
+	};
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* 64K */
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 0x00010000>;
+		};
+		/* 640K */
+		slot0_partition: partition@10000 {
+			label = "image-0";
+		};
+		/* 256K */
+		slot0_ns_partition: partition@b0000 {
+			label = "image-0-nonsecure";
+		};
+
+		/*
+		 * The flash starting at 0x000f8000 and ending at
+		 * 0x000fffff is reserved for use by the application.
+		 */
+
+		/*
+		 * Storage partition will be used by FCB/NVS
+		 * if enabled. 32K
+		 */
+		storage_partition: partition@f8000 {
+			label = "storage";
+			reg = <0x000f8000 0x00008000>;
+		};
+	};
+};
+
+&mx25r64 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* 640K */
+		slot1_partition: partition@0 {
+			label = "image-1";
+		};
+		/* 256K */
+		slot1_ns_partition: partition@A0000 {
+			label = "image-1-nonsecure";
+		};
+		/* 128K */
+		scratch_partition: partition@e0000 {
+			label = "image-scratch";
+			reg = <0x000e0000 0x00020000>;
+		};
+		/* 7MB */
+		lfs_partition: partition@100000 {
+			label = "lfs_storage";
+			reg = <0x00100000 0x00700000>;
+		};
+	};
+};
+
+/ {
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		sram0_image: image@20000000 {
+			/* Zephyr image(s) memory */
+		};
+
+		sram0_s: image_s@20000000 {
+			/* Secure image memory */
+		};
+
+		sram0_ns: image_ns@20040000 {
+			/* Non-Secure image memory */
+		};
+	};
+};
+
+/* Include partition configuration file */
+#include "sh400_bl5340-cpuapp_partitioning.dtsi"

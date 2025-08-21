@@ -1,0 +1,19 @@
+/dts-v1/;
+#include <nordic/nrf5340_cpuapp_qkaa.dtsi>
+#include "sh400_bl5340_nrf5340_cpuapp_common.dtsi"
+
+/ {
+	model = "SH-400 Board based on BL5340 (CPUAPP)";
+	compatible = "efcom,sh400-bl5340-cpuapp";
+
+	chosen {
+		zephyr,sram = &sram0_image;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,sram-secure-partition = &sram0_s;
+		zephyr,sram-non-secure-partition = &sram0_ns;
+	};
+};
+
+#include "sh400_bl5340-cpuapp_partitioning.dtsi"
+#include "sh400_bl5340-shared_sram.dtsi"

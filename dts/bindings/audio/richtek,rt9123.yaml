@@ -1,0 +1,13 @@
+title: "Richtek RT9123 Audio Amplifier Binding"
+description: "RT9123 Audio Amplifier"
+compatible: "richtek,rt9123"
+on-bus: "i2c"
+
+properties:
+  reg:
+    description: "I2C 7-bit address"
+    required: true
+    type: int
+  vdd-supply:
+    description: "Optional supply voltage"
+    type: phandle
