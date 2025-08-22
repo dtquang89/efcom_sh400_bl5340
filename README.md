@@ -26,6 +26,18 @@ west update
 west zephyr-export
 ```
 
+### Project structure - A top-level directory
+
+    .
+    ├── app                 # Source code of main application
+    ├── boards              # Board definition
+    ├── doc                 # Doxygen
+    ├── drivers             # Sensor drivers
+    ├── dts                 # Binding device-tree for sensors and other devices
+    └── CMakeLists.txt      # Build file system
+    └── KConfig             # Configuration for macros
+    └── west.yml            # Manifest to specify repository of the modules.
+
 ### Building and running
 
 To build the application, run the following command:
