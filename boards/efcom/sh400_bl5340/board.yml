@@ -1,8 +1,9 @@
 board:
   name: sh400_bl5340
+  full_name: SH400 BL5340
   vendor: efcom
   socs:
-  - name: nrf5340
-    variants:
-    - name: ns
-      cpucluster: cpuapp
+    - name: "nrf5340"
+      variants:
+        - name: "ns"
+          cpucluster: "cpuapp"

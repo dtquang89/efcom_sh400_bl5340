@@ -9,6 +9,9 @@ CONFIG_HW_STACK_PROTECTION=y
 # Enable TrustZone-M
 CONFIG_ARM_TRUSTZONE_M=y
 
+# This board implies building Non-Secure firmware
+CONFIG_TRUSTED_EXECUTION_NONSECURE=y
+
 # Enable GPIO
 CONFIG_GPIO=y
 
@@ -18,6 +21,3 @@ CONFIG_SERIAL=y
 # Enable console
 CONFIG_CONSOLE=y
 CONFIG_UART_CONSOLE=y
-
-# Setup clocks
-CONFIG_CLOCK_CONTROL_NRF_K32SRC_250PPM=y
