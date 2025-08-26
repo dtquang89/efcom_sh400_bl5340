@@ -1,0 +1,40 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "main application",
+            "type": "cortex-debug",
+            "device": "nrf5340_xxaa_app",
+            "executable": "/Users/qdu/dev/mindfield_esense_eda/firmware/app/build/zephyr/zephyr.elf",
+            "rtos": "Zephyr",
+            "cwd": "",
+            "request": "attach",
+            "serverpath": "/Applications/SEGGER/JLink/JLinkGDBServerCLExe",
+            "serverArgs": [
+                "-device nrf5340_xxaa_app",
+                "-speed 4000"
+            ],
+            "miMode": "gdb",
+            "miDebuggerPath": "arm-none-eabi-gdb",
+            "miDebuggerArgs": "set mem inaccessible-by-default off",
+            "servertype": "jlink",
+            "interface": "swd",
+            // "runToEntryPoint": "main",
+            // "svdFile": "",
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "decoders": [
+                    {
+                        "label": "",
+                        "port": 0,
+                        "type": "console"
+                    }
+                ]
+            }
+        }
+    ]
+}
