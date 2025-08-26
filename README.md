@@ -10,6 +10,35 @@ Before getting started, make sure you have a proper Zephyr development
 environment. Follow the official
 [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html).
 
+### Prerequisites
+
+Install dependencies package: `CMake` `Python` `Devicetree compiler`
+
+```shell
+# For Windows
+winget install Kitware.CMake Ninja-build.Ninja oss-winget.gperf python Git.Git oss-winget.dtc wget 7zip.7zip
+```
+
+`Python3` and `west` need to be installed on the system
+
+```shell
+# to check if python is installed
+python --version
+pip3 install -U west
+# Get the information about west and where it is located
+pip3 show -f west
+## It is necesssary to add the path-to-west-scripts in to PATH environment variables on Windows OS.
+## It should be added in System -> Advanced System Settings -> Environment Variables -> Edit..
+# Check if west is successfully install on the system
+west --version
+```
+
+It is necessary to add `west`, `cmake` and other installed packages to `PATH`, so the commands can be used by the system.
+In Windows, it can be done following here: System -> Advanced System Settings -> Environment Variables -> Edit..
+
+Follow the official
+[Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html) to install Zephyr SDK.
+
 ### Initialization
 
 The first step is to initialize the workspace folder (``efcom_workspace``) where
@@ -57,7 +86,7 @@ A sample debug configuration is also provided. To apply it, run the following
 command:
 
 ```shell
-west build -b $BOARD app -- -DEXTRA_CONF_FILE=debug.conf
+west build -b $BOARD app -DCMAKE_BUILD_TYPE=DEVELOP
 ```
 
 Once you have built the application, run the following command to flash it:
