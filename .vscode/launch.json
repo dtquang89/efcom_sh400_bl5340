@@ -8,7 +8,7 @@
             "name": "main application",
             "type": "cortex-debug",
             "device": "nrf5340_xxaa_app",
-            "executable": "/Users/qdu/dev/mindfield_esense_eda/firmware/app/build/zephyr/zephyr.elf",
+            "executable": "/Users/qdu/dev/efcom_test/efcom_sh400_bl5340/build/app/zephyr/zephyr.elf",
             "rtos": "Zephyr",
             "cwd": "",
             "request": "attach",
