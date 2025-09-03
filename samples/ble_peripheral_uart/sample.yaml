@@ -1,0 +1,22 @@
+sample:
+  description: Bluetooth Low Energy UART service sample
+  name: Bluetooth LE UART service
+tests:
+  sample.bluetooth.peripheral_uart:
+    sysbuild: true
+    platform_allow:
+      - sh400_bl5340/nrf5340/cpuapp
+      - sh400_bl5340/nrf5340/cpuapp/ns
+    integration_platforms:
+      - sh400_bl5340/nrf5340/cpuapp
+      - sh400_bl5340/nrf5340/cpuapp/ns
+    tags:
+      - bluetooth
+      - ci_build
+      - sysbuild
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "Starting Nordic UART service sample"
