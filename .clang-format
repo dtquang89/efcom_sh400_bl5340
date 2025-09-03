@@ -1,0 +1,45 @@
+# Copyright deveritec GmbH, Bamberger Straße 1, 01187 Dresden Germany
+#
+# Global deveritec C/C++ code style settings.
+#
+# For reference see https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+#
+# author: Alex Bereza
+
+Language: Cpp
+BasedOnStyle: Google
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: MultiLine
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: true
+ColumnLimit: 140
+DerivePointerAlignment: false # Make sure the * or & align on the left
+IncludeBlocks: Preserve
+IndentCaseLabels: false
+IndentPPDirectives: BeforeHash
+IndentWidth: 4
+KeepEmptyLinesAtTheStartOfBlocks: true
+NamespaceIndentation: Inner
+PackConstructorInitializers: Never
+QualifierAlignment: Left
+ReflowComments: true
+SeparateDefinitionBlocks: Always
+SpaceAfterTemplateKeyword: false
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+SpacesInContainerLiterals: false
