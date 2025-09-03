@@ -58,14 +58,18 @@ west zephyr-export
 ### Project structure - A top-level directory
 
     .
-    ├── app                 # Source code of main application
-    ├── boards              # Board definition
-    ├── doc                 # Doxygen
-    ├── drivers             # Sensor drivers
-    ├── dts                 # Binding device-tree for sensors and other devices
-    └── CMakeLists.txt      # Build file system
-    └── KConfig             # Configuration for macros
-    └── west.yml            # Manifest to specify repository of the modules.
+    ├── app                         # Source code of main application
+    ├── boards                      # Board definition
+    ├── doc                         # Doxygen
+    ├── drivers                     # Sensor drivers
+    ├── dts                         # Binding device-tree for sensors and other devices
+    ├── lib                         # Library/wrapper for different modules
+        ├── ble                     # Library for BLE module
+    ├── samples                     # Source code of separate samples application
+        ├── ble_peripheral_uart     # BLE Peripheral sample
+    └── CMakeLists.txt              # Build file system
+    └── KConfig                     # Configuration for macros
+    └── west.yml                    # Manifest to specify repository of the modules.
 
 ### Building and running
 
@@ -78,7 +82,7 @@ west build -b $BOARD app
 
 where `$BOARD` is the target board.
 
-You can use the `sh400_bl5340/nrf5340/cpuapp` board found in this
+You can use the `sh400_bl5340/nrf5340/cpuapp/ns` or `sh400_bl5340/nrf5340/cpuapp` board found in this
 repository. Note that Zephyr sample boards may be used if an
 appropriate overlay is provided (see `app/boards`).
 
@@ -88,6 +92,15 @@ command:
 ```shell
 west build -b $BOARD app -DCMAKE_BUILD_TYPE=DEVELOP
 ```
+
+In order to build the sample application, changing the path to the desire sample application and start to run build with the following commands:
+
+```shell
+cd samples/ble_peripheral_uart
+west build -b $BOARD
+```
+
+These sample application are compiled with DEBUG feature, therefore it is not needed to have the `-DCMAKE_BUILD_TYPE=DEVELOP` in the command.
 
 Once you have built the application, run the following command to flash it:
 
