@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+menuconfig UART_WRAPPER
+    bool "UART wrapper library"
+    default n
+    select SERIAL
+    help
+      Enable a tiny UART wrapper helper.
+
+if UART_WRAPPER
+
+config UART_WRAPPER_LOG_LEVEL
+    int "Log level"
+    default 3
+    range 0 4
+    help
+      0: None, 1: Err, 2: Warn, 3: Inf, 4: Debug
+
+config UART_BUFFER_SIZE
+	int "UART payload buffer element size"
+	default 40
+	help
+	  Size of the payload buffer in each RX and TX FIFO element
+
+endif # UART_WRAPPER

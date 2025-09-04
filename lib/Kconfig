@@ -4,5 +4,6 @@
 menu "Libraries"
 
 rsource "ble/Kconfig"
+rsource "uart/Kconfig"
 
 endmenu
