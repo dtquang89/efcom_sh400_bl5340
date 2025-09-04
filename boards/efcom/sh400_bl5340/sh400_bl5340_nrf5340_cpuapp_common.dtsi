@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#include "sh400_bl5340-pinctrl.dtsi"
+#include "sh400_bl5340_nrf5340_cpuapp_common-pinctrl.dtsi"
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
@@ -141,28 +141,6 @@
 
 };
 
-&vregmain {
-	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
-};
-
-&vregradio {
-	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
-};
-
-&vregh {
-	status = "okay";
-};
-
-&lfxo {
-	load-capacitors = "internal";
-	load-capacitance-picofarad = <7>;
-};
-
-&hfxo {
-	load-capacitors = "internal";
-	load-capacitance-femtofarad = <13500>;
-};
-
 &adc {
     status = "okay";
 };
@@ -261,33 +239,6 @@ dmic_dev: &pdm0 {
 	clock-source = "ACLK";
 };
 
-&qspi {
-	status = "okay";
-	pinctrl-0 = <&qspi_default>;
-	pinctrl-1 = <&qspi_sleep>;
-	pinctrl-names = "default", "sleep";
-	mx25r64: mx25r6435f@0 {
-		compatible = "nordic,qspi-nor";
-		reg = <0>;
-		/* MX25R64 supports only pp and pp4io */
-		writeoc = "pp4io";
-		/* MX25R64 supports all readoc options */
-		readoc = "read4io";
-		sck-frequency = <8000000>;
-		jedec-id = [c2 28 17];
-		sfdp-bfp = [
-			e5 20 f1 ff  ff ff ff 03  44 eb 08 6b  08 3b 04 bb
-			ee ff ff ff  ff ff 00 ff  ff ff 00 ff  0c 20 0f 52
-			10 d8 00 ff  23 72 f5 00  82 ed 04 cc  44 83 68 44
-			30 b0 30 b0  f7 c4 d5 5c  00 be 29 ff  f0 d0 ff ff
-		];
-		size = <67108864>;
-		has-dpd;
-		t-enter-dpd = <10000>;
-		t-exit-dpd = <35000>;
-	};
-};
-
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";
@@ -324,33 +275,6 @@ dmic_dev: &pdm0 {
 	};
 };
 
-&mx25r64 {
-	partitions {
-		compatible = "fixed-partitions";
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		/* 640K */
-		slot1_partition: partition@0 {
-			label = "image-1";
-		};
-		/* 256K */
-		slot1_ns_partition: partition@A0000 {
-			label = "image-1-nonsecure";
-		};
-		/* 128K */
-		scratch_partition: partition@e0000 {
-			label = "image-scratch";
-			reg = <0x000e0000 0x00020000>;
-		};
-		/* 7MB */
-		lfs_partition: partition@100000 {
-			label = "lfs_storage";
-			reg = <0x00100000 0x00700000>;
-		};
-	};
-};
-
 / {
 	reserved-memory {
 		#address-cells = <1>;
@@ -372,4 +296,4 @@ dmic_dev: &pdm0 {
 };
 
 /* Include partition configuration file */
-#include "sh400_bl5340-cpuapp_partitioning.dtsi"
+#include "sh400_bl5340_nrf5340_cpuapp_partition_conf.dtsi"

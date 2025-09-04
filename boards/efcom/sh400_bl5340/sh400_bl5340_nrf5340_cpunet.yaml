@@ -1,0 +1,17 @@
+identifier: sh400_bl5340/nrf5340/cpunet
+name: SH400-BL5340-network-MCU
+type: mcu
+arch: arm
+toolchain:
+  - gnuarmemb
+  - zephyr
+ram: 64
+flash: 256
+supported:
+  - counter
+  - gpio
+  - i2c
+  - spi
+  - uart
+  - watchdog
+vendor: efcom

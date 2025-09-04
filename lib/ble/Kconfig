@@ -1,0 +1,8 @@
+# Copyright (c) 2021, Legrand North America, LLC.
+# SPDX-License-Identifier: Apache-2.0
+
+config EFCOM_LIB_BLE
+	bool "BLE wrapper library"
+	default n
+	help
+	  This option enables the BLE wrapper library

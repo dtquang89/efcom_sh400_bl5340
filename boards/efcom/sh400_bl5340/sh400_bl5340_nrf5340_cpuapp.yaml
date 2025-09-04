@@ -1,0 +1,20 @@
+identifier: sh400_bl5340/nrf5340/cpuapp
+name: SH400-BL5340-application-MCU
+type: mcu
+arch: arm
+toolchain:
+  - gnuarmemb
+  - zephyr
+ram: 448
+flash: 1024
+supported:
+  - counter
+  - gpio
+  - i2c
+  - pwm
+  - qspi
+  - spi
+  - uart
+  - usb_device
+  - watchdog
+vendor: efcom
