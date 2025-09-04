@@ -10,7 +10,7 @@ list(APPEND OVERLAY_CONFIG
 )
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-project(NONE)
+project(ble)
 
 # NORDIC SDK APP START
 target_sources(app PRIVATE
