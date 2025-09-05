@@ -22,7 +22,7 @@ struct tx_node
     uint8_t data[];
 };
 
-#if defined(CONFIG_UART_ASYNC_API)
+#if CONFIG_UART_ASYNC_API
 static void uaw_uart_cb(const struct device* dev, struct uart_event* evt, void* user_data)
 {
     struct uart_ctx* ctx = (struct uart_ctx*)user_data;
@@ -81,10 +81,14 @@ static bool test_async_api(const struct device* dev)
 }
 #endif
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN)
+#if CONFIG_UART_INTERRUPT_DRIVEN
 static void uaw_irq_handler(const struct device* dev, void* user_data)
 {
-    struct uart_async_ctx* ctx = user_data;
+    struct uart_ctx* ctx = user_data;
+
+    if (!uart_irq_update(dev)) {
+        return;
+    }
 
     if (uart_irq_update(dev) && uart_irq_is_pending(dev)) {
         /* RX ready */
@@ -102,13 +106,25 @@ static void uaw_irq_handler(const struct device* dev, void* user_data)
         /* TX ready */
         if (uart_irq_tx_ready(dev)) {
             if (ctx->tx_pending) {
-                size_t remaining = ctx->tx_pending->len - ctx->tx_progress;
-                int sent = uart_fifo_fill(dev, ctx->tx_pending->data + ctx->tx_progress, remaining);
-                ctx->tx_progress += sent;
-                if (ctx->tx_progress >= ctx->tx_pending->len) {
-                    /* fully sent, wait for complete */
-                    uart_irq_tx_disable(dev);
+                /* Keep filling until fifo can't accept more or buffer finished */
+                while (ctx->tx_pending && uart_irq_tx_ready(dev)) {
+                    size_t remaining = ctx->tx_pending->len - ctx->tx_progress;
+                    if (remaining == 0) {
+                        break;
+                    }
+                    int can_write = uart_irq_tx_ready(dev);
+                    /* can_write returns >0: minimum bytes that may be written */
+                    int to_write = (int)MIN(remaining, (size_t)can_write);
+                    int written = uart_fifo_fill(dev, ctx->tx_pending->data + ctx->tx_progress, to_write);
+                    if (written <= 0) {
+                        /* hardware doesn't accept any now */
+                        break;
+                    }
+                    ctx->tx_progress += written;
                 }
+                /* If we've copied all bytes into FIFO, keep TX IRQ enabled and wait
+                 * for uart_irq_tx_complete() to become true later.
+                 */
             }
             else {
                 /* nothing to send */
@@ -132,6 +148,10 @@ static void uaw_irq_handler(const struct device* dev, void* user_data)
                 ctx->tx_pending = node;
                 ctx->tx_progress = 0;
                 uart_irq_tx_enable(dev);
+            }
+            else {
+                /* no more data: disable TX interrupts */
+                uart_irq_tx_disable(dev);
             }
         }
     }
@@ -163,15 +183,32 @@ int uaw_init(struct uart_ctx* ctx, const struct device* uart_dev, uint8_t* rx_a,
         return -ENODEV;
     }
 
-#if defined(CONFIG_UART_ASYNC_API)
+#if CONFIG_UART_ASYNC_API
+    LOG_INF("Adding callback for ASYNC API");
     if (test_async_api(uart_dev)) {
         ctx->backend = UAW_BACKEND_ASYNC;
         return uart_callback_set(uart_dev, uaw_uart_cb, ctx);
     }
 #endif
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN)
+
+#if CONFIG_UART_INTERRUPT_DRIVEN
     ctx->backend = UAW_BACKEND_IRQ;
-    uart_irq_callback_user_data_set(uart_dev, uaw_irq_handler, ctx);
+    LOG_INF("Adding callback for IRQ backend");
+    int ret = uart_irq_callback_user_data_set(uart_dev, uaw_irq_handler, ctx);
+
+    if (ret < 0) {
+        if (ret == -ENOTSUP) {
+            LOG_ERR("Interrupt-driven UART API support not enabled");
+        }
+        else if (ret == -ENOSYS) {
+            LOG_ERR("UART device does not support interrupt-driven API");
+        }
+        else {
+            LOG_ERR("Error setting UART callback: %d", ret);
+        }
+        return -EIO;
+    }
+
     uart_irq_rx_enable(uart_dev);
     return 0;
 #endif
@@ -253,24 +290,43 @@ int uaw_write(struct uart_ctx* ctx, const void* data, size_t len)
     node->len = len;
     memcpy(node->data, data, len);
 
-    unsigned int key = irq_lock();
-    int start_immediately = (ctx->tx_pending == NULL);
-    irq_unlock(key);
+    if (ctx->backend == UAW_BACKEND_ASYNC) {
+        /* async path (your existing code) */
+        unsigned int key = irq_lock();
+        int start_immediately = (ctx->tx_pending == NULL);
+        irq_unlock(key);
 
-    if (start_immediately) {
-        int rc = uart_tx(ctx->uart, node->data, node->len, SYS_FOREVER_US);
-        if (rc == 0) {
-            ctx->tx_pending = node;
-            return 0;
+        if (start_immediately) {
+            int rc = uart_tx(ctx->uart, node->data, node->len, SYS_FOREVER_US);
+            if (rc == 0) {
+                ctx->tx_pending = node;
+                return 0;
+            }
+            if (rc != -EBUSY) {
+                k_free(node);
+                return rc;
+            }
         }
-        if (rc != -EBUSY) {
-            k_free(node);
-            return rc;
-        }
+        k_fifo_put(&ctx->tx_fifo, node);
+        return 0;
     }
 
-    k_fifo_put(&ctx->tx_fifo, node);
-    return 0;
+    if (ctx->backend == UAW_BACKEND_IRQ) {
+        unsigned int key = irq_lock();
+        if (!ctx->tx_pending) {
+            ctx->tx_pending = node;
+            ctx->tx_progress = 0;
+            uart_irq_tx_enable(ctx->uart); /* kick off ISR to start filling */
+            irq_unlock(key);
+            return 0;
+        }
+        irq_unlock(key);
+        k_fifo_put(&ctx->tx_fifo, node);
+        return 0;
+    }
+
+    k_free(node);
+    return -ENOTSUP;
 }
 
 int uaw_deinit(struct uart_ctx* ctx)
