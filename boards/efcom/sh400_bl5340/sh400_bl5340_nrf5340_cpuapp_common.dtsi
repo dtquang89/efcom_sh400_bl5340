@@ -117,7 +117,7 @@
 	voltage_divider {
         compatible = "voltage-divider";
 
-        io-channels = <&adc 7>; // AIN7
+        io-channels = <&adc 0>; // AIN7
         output-ohms = <249000>;
         full-ohms = <(249000 + 100000)>;
     };
@@ -147,6 +147,21 @@
 
 &adc {
     status = "okay";
+
+	#address-cells = <1>;
+    #size-cells = <0>;
+
+    io-channels = <&adc 0>;
+
+    battery_meas: channel@0 {
+        reg = <0>;
+        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+        zephyr,input-positive = <NRF_SAADC_AIN7>;
+        zephyr,resolution = <14>;
+        zephyr,oversampling = <8>;
+    };
 };
 
 &gpiote {

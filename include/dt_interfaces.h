@@ -50,9 +50,24 @@
 
 /* Battery measurement related */
 #define VOLTAGE_DIVIDER_NODE DT_PATH(voltage_divider)
+#define ADC_NODE             DT_NODELABEL(adc)
 
-#if !DT_NODE_HAS_STATUS(VOLTAGE_DIVIDER_NODE, okay)
-    #error "Unsupported board: voltage_divider devicetree node label is not defined"
+#if DT_NODE_HAS_STATUS(VOLTAGE_DIVIDER_NODE, okay)
+    #define VBATT_NODE          VOLTAGE_DIVIDER_NODE
+    #define HAS_VOLTAGE_DIVIDER true
+#else
+    #define VBATT_NODE          ADC_NODE
+    #define HAS_VOLTAGE_DIVIDER false
+#endif
+
+#if (HAS_VOLTAGE_DIVIDER == false) && !DT_NODE_HAS_STATUS(ADC_NODE, okay)
+    #error "Unsupported board: adc devicetree node label is not defined"
+    #define ADC_SPEC \
+        {            \
+            0        \
+        }
+#else
+    #define ADC_SPEC ADC_DT_SPEC_GET_BY_IDX(ADC_NODE, 0)
 #endif
 
 /* Sensor/Chip */
