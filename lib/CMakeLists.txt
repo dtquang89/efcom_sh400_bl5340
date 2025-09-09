@@ -2,3 +2,4 @@
 
 add_subdirectory_ifdef(CONFIG_BLE_WRAPPER ble)
 add_subdirectory_ifdef(CONFIG_UART_WRAPPER uart)
+add_subdirectory_ifdef(CONFIG_GPIO_WRAPPER gpio)

@@ -27,28 +27,33 @@
 		};
 
 		drc_in_1: drc_in_1 {
-            gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio0 22 GPIO_ACTIVE_LOW>;
             label = "Dry contact Input 1";
+			zephyr,code = <INPUT_KEY_1>;
         };
 
 		drc_in_2: drc_in_2 {
-            gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio0 23 GPIO_ACTIVE_LOW>;
             label = "Dry contact Input 2";
+			zephyr,code = <INPUT_KEY_2>;
         };
 
 		sdst: sdst {
-            gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
             label = "MicroSD card Status";
+			zephyr,code = <INPUT_KEY_3>;
         };
 
 		power_good: power_good {
-            gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
             label = "Power source Status";
+			zephyr,code = <INPUT_KEY_4>;
         };
 
 		charge_st: charge_st {
-            gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
             label = "Battery Charging Status";
+			zephyr,code = <INPUT_KEY_5>;
         };
 	};
 
@@ -122,7 +127,6 @@
 		led0 = &led0;
         led1 = &led1;
         led2 = &led2;
-        pwm-led0 = &green_pwm_led;
 		red-pwm-led = &red_pwm_led;
 		green-pwm-led = &green_pwm_led;
 		blue-pwm-led = &blue_pwm_led;

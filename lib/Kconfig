@@ -5,5 +5,6 @@ menu "Libraries"
 
 rsource "ble/Kconfig"
 rsource "uart/Kconfig"
+rsource "gpio/Kconfig"
 
 endmenu
