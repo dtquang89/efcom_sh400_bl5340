@@ -6,11 +6,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
-#include <zephyr/device.h>
-#include <zephyr/devicetree.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/kernel.h>
-
 typedef enum { GPIOW_DIR_INPUT, GPIOW_DIR_OUTPUT } gpiow_dir_t;
 
 typedef void (*gpiow_callback_t)(const struct device* dev, struct gpio_callback* cb, uint32_t pins);
