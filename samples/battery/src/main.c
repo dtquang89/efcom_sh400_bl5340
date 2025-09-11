@@ -22,12 +22,12 @@ static struct analog_control_t adc_ctx;
 /* --- Callback functions --- */
 static void pre_measurement_cb(void* user_handle)
 {
-    LOG_INF("Pre-measurement callback (user=%p)", user_handle);
+    LOG_DBG("Pre-measurement callback (user=%p)", user_handle);
 }
 
 static void post_measurement_cb(void* user_handle)
 {
-    LOG_INF("Post-measurement callback (user=%p)", user_handle);
+    LOG_DBG("Post-measurement callback (user=%p)", user_handle);
 }
 
 int main(void)

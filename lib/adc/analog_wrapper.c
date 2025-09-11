@@ -138,7 +138,7 @@ int analog_read_raw(struct analog_control_t* ctx, int16_t* raw_val)
 
     ctx->sequence_cfg.calibrate = false;  // recalibrate after enabling ADC input
 
-    LOG_INF("raw adc value: %d", ctx->adc_value);
+    LOG_DBG("raw adc value: %d", ctx->adc_value);
 
     *raw_val = ctx->adc_value;
 
@@ -158,7 +158,13 @@ int analog_read_voltage_mv(struct analog_control_t* ctx, int32_t* voltage_mv)
 
     int32_t raw_val32 = raw_adc; /* promote to 32-bit */
 
-    ctx->cached_voltage = adc_raw_to_millivolts_dt(&ctx->adc_dt, &raw_val32);
+    ret = adc_raw_to_millivolts_dt(&ctx->adc_dt, &raw_val32);
+    if (ret)
+        return ret;
+
+    LOG_DBG("raw voltage value: %d", raw_val32);
+
+    ctx->cached_voltage = raw_val32;
     *voltage_mv = ctx->cached_voltage;
 
     return 0;
