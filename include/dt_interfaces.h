@@ -28,6 +28,23 @@
     #error "Unsupported board: led2 devicetree node label is not defined"
 #endif
 
+/* RGB LED */
+#define PWM_RED_NODE   DT_ALIAS(red_pwm_led)
+#define PWM_GREEN_NODE DT_ALIAS(green_pwm_led)
+#define PWM_BLUE_NODE  DT_ALIAS(blue_pwm_led)
+
+#if !DT_NODE_HAS_STATUS(PWM_RED_NODE, okay)
+    #error "Unsupported board: red-pwm-led devicetree node label is not defined"
+#endif
+
+#if !DT_NODE_HAS_STATUS(PWM_GREEN_NODE, okay)
+    #error "Unsupported board: green-pwm-led devicetree node label is not defined"
+#endif
+
+#if !DT_NODE_HAS_STATUS(PWM_BLUE_NODE, okay)
+    #error "Unsupported board: blue-pwm-led devicetree node label is not defined"
+#endif
+
 /* Outputs */
 #define CODEC_IRQ_NODE DT_ALIAS(codec_irq)
 
