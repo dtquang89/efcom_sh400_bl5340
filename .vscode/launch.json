@@ -195,6 +195,70 @@
                     }
                 ]
             }
+        },
+        {
+            "name": "sdcard sample",
+            "type": "cortex-debug",
+            "device": "nrf5340_xxaa_app",
+            "executable": "/Users/qdu/dev/efcom_test/efcom_sh400_bl5340/samples/sdcard/build/sdcard/zephyr/zephyr.elf",
+            "rtos": "Zephyr",
+            "cwd": "",
+            "request": "attach",
+            "serverpath": "/Applications/SEGGER/JLink/JLinkGDBServerCLExe",
+            "serverArgs": [
+                "-device nrf5340_xxaa_app",
+                "-speed 4000"
+            ],
+            "miMode": "gdb",
+            "miDebuggerPath": "arm-none-eabi-gdb",
+            "miDebuggerArgs": "set mem inaccessible-by-default off",
+            "servertype": "jlink",
+            "interface": "swd",
+            // "runToEntryPoint": "main",
+            // "svdFile": "",
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "decoders": [
+                    {
+                        "label": "",
+                        "port": 0,
+                        "type": "console"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "soc internal flash sample",
+            "type": "cortex-debug",
+            "device": "nrf5340_xxaa_app",
+            "executable": "/Users/qdu/dev/efcom_test/efcom_sh400_bl5340/samples/soc_flash_nrf/build/soc_flash_nrf/zephyr/zephyr.elf",
+            "rtos": "Zephyr",
+            "cwd": "",
+            "request": "attach",
+            "serverpath": "/Applications/SEGGER/JLink/JLinkGDBServerCLExe",
+            "serverArgs": [
+                "-device nrf5340_xxaa_app",
+                "-speed 4000"
+            ],
+            "miMode": "gdb",
+            "miDebuggerPath": "arm-none-eabi-gdb",
+            "miDebuggerArgs": "set mem inaccessible-by-default off",
+            "servertype": "jlink",
+            "interface": "swd",
+            // "runToEntryPoint": "main",
+            // "svdFile": "",
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "decoders": [
+                    {
+                        "label": "",
+                        "port": 0,
+                        "type": "console"
+                    }
+                ]
+            }
         }
     ]
 }
