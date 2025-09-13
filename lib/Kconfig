@@ -8,5 +8,6 @@ rsource "uart/Kconfig"
 rsource "adc/Kconfig"
 rsource "gpio/Kconfig"
 rsource "pwm/Kconfig"
+rsource "sdcard/Kconfig"
 
 endmenu
