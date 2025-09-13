@@ -1,0 +1,9 @@
+# Copyright (c) 2021, Legrand North America, LLC.
+# SPDX-License-Identifier: Apache-2.0
+
+config I2C_WRAPPER
+	bool "PWM wrapper"
+	default n
+	select I2C
+	help
+	  This is the tiny library for PWM to control RGB LED.
