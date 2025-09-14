@@ -11,7 +11,7 @@ list(APPEND OVERLAY_CONFIG
 )
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-project(gpo)
+project(gpio)
 
 # NORDIC SDK APP START
 target_sources(app PRIVATE
