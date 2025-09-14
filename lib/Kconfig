@@ -9,5 +9,6 @@ rsource "adc/Kconfig"
 rsource "gpio/Kconfig"
 rsource "pwm/Kconfig"
 rsource "sdcard/Kconfig"
+rsource "i2c/Kconfig"
 
 endmenu

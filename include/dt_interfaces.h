@@ -94,4 +94,10 @@
     #error "Unsupported board: extrtc0 devicetree node label is not defined"
 #endif
 
+#define AMPLIFIER_NODE DT_NODELABEL(rt9123_amp)
+
+#if !DT_NODE_HAS_STATUS(AMPLIFIER_NODE, okay)
+    #error "Unsupported board: rt9123_amp devicetree node label is not defined"
+#endif
+
 #endif /* FIRMWARE_APPLICATION_SRC_DT_INTERFACES_H_ */

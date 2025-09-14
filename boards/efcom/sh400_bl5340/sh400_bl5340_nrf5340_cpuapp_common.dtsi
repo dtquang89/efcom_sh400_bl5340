@@ -195,10 +195,9 @@
         mclk-frequency = <13000000>; /* please change according to your application */
     };
 
-	extrtc0: max31341@d2 {
+	extrtc0: max31341@69 {
         compatible = "adi,max31341";
-        status = "okay";
-        reg = <0xd2>;                  /* I2C address (0xD2) */
+        reg = <0x69>;                  /* I2C address (0xD2) */
         int-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
     };
 };
