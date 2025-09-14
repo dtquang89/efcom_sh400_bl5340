@@ -5,69 +5,97 @@
  */
 
 #include <stdio.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 #include "dt_interfaces.h"
-#include "i2c_wrapper.h"
 
 LOG_MODULE_REGISTER(main);
 
-/* Sleep time */
-#define SLEEP_TIME_MS 1000
+#define I2C_NODE DT_NODELABEL(i2c1)
 
-static const struct i2c_dt_spec i2c_dev = I2C_DT_SPEC_GET(AMPLIFIER_NODE);
-static struct i2c_ctx i2c_handle;
+/* MAX31341 RTC I2C Configuration */
+#define MAX31341_I2C_ADDR 0x69  // 7-bit I2C address from DT
+#define MAX31341_REG_ID   0x59  // Revision ID register
 
-K_THREAD_STACK_DEFINE(i2c_worker_stack, 1024);
-
-static void i2c_done_cb(void* user_data, int result, uint8_t* buf, size_t len)
+/**
+ * @brief Read a single register from MAX31341 RTC
+ *
+ * @param reg_addr Register address to read
+ * @param data Pointer to store read data
+ * @return 0 on success, negative error code on failure
+ */
+static int max31341_read_reg(const struct device* dev, uint8_t reg_addr, uint8_t* data)
 {
-    if (result == 0) {
-        LOG_INF("Async I2C read OK: 0x%02X", buf[0]);
+    int ret;
+
+    ret = i2c_write_read(dev, MAX31341_I2C_ADDR, &reg_addr, 1, data, 1);
+    if (ret != 0) {
+        LOG_ERR("Failed to read register 0x%02X: %d", reg_addr, ret);
+        return ret;
     }
-    else {
-        LOG_ERR("Async I2C read failed (%d)", result);
-    }
+
+    return 0;
 }
 
+/**
+ * @brief Read manufacturer/device ID from MAX31341 RTC
+ *
+ * @param id_data Array to store 1 bytes of ID data
+ * @return 0 on success, negative error code on failure
+ */
+int max31341_read_device_id(uint8_t* id_data)
+{
+    int ret;
+    uint8_t reg_val;
+
+    /* Verify RTC device is ready */
+    const struct device* rtc_dev = DEVICE_DT_GET(I2C_NODE);
+    if (!device_is_ready(rtc_dev)) {
+        LOG_WRN("RTC device not ready, proceeding with I2C access");
+    }
+
+    LOG_INF("I2C device i2c1 ready");
+
+    /* I2C is already configured via device tree, no need to reconfigure */
+    LOG_INF("Using I2C address 0x%02X for MAX31341 RTC", MAX31341_I2C_ADDR);
+
+    /* Read ID registers */
+    ret = max31341_read_reg(rtc_dev, MAX31341_REG_ID, &reg_val);
+    if (ret != 0) {
+        LOG_ERR("Failed to read ID register");
+        return ret;
+    }
+
+    LOG_INF("Device ID: 0x%02X", reg_val);
+
+    *id_data = reg_val;
+
+    return 0;
+}
+
+/* Example usage in main thread */
 int main(void)
 {
-    LOG_INF("Starting the application...");
+    uint8_t device_id;
+    int ret;
 
-    int ret = 0;
-    ret = i2cw_init(&i2c_handle, &i2c_dev, i2c_worker_stack, sizeof(i2c_worker_stack), K_PRIO_PREEMPT(0));
+    LOG_INF("MAX31341 RTC ID Reader Starting...");
 
-    if (ret < 0) {
-        LOG_ERR("Init failed");
-        return 0;
+    /* Read device ID */
+    ret = max31341_read_device_id(&device_id);
+    if (ret != 0) {
+        LOG_ERR("Failed to read device ID: %d", ret);
+        return ret;
     }
 
-    LOG_INF("I2C wrapper initialized");
+    LOG_INF("MAX31341 initialization complete");
 
-    ret = i2cw_register_callback(&i2c_handle, i2c_done_cb, NULL);
-
-    if (ret < 0) {
-        LOG_ERR("Register callback failed");
-        return 0;
-    }
-
-    uint8_t reg = 0x00;
-    static uint8_t rx_buf[1];
-
-    ret = i2cw_async_write_read(&i2c_handle, &reg, 1, rx_buf, 1);
-
-    if (ret < 0) {
-        LOG_ERR("Init failed");
-        return 0;
-    }
-
-    /* Cleanup */
-    i2cw_deinit(&i2c_handle);
-    LOG_INF("I2C wrapper deinitialized");
-
+    /* Keep the main thread alive */
     while (1) {
-        k_msleep(SLEEP_TIME_MS);
+        k_sleep(K_SECONDS(10));
     }
 
     return 0;
