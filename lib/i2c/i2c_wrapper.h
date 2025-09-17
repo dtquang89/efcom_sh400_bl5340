@@ -1,5 +1,16 @@
-#ifndef i2cw_H_
-#define i2cw_H_
+/**
+ * @file i2c_wrapper.h
+ * @author Quang Duong
+ * @brief I2C wrapper API for Zephyr-based projects.
+ * @version 0.1
+ * @date 2025-09-17
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
+#ifndef I2C_WRAPPER_H_
+#define I2C_WRAPPER_H_
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/i2c.h>
@@ -46,6 +57,9 @@ struct i2c_ctx
  *
  * @param ctx     Pointer to wrapper context
  * @param bus_dt  Devicetree I2C specification
+ * @param stack   Pointer to thread stack memory
+ * @param stack_size Size of thread stack
+ * @param prio    Thread priority
  *
  * @retval 0 On success
  * @retval -ENODEV If device not ready
@@ -127,4 +141,4 @@ int i2cw_register_callback(struct i2c_ctx* ctx, i2cw_callback_t cb, void* user_d
  */
 int i2cw_async_write_read(struct i2c_ctx* ctx, const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf, size_t rx_len);
 
-#endif  // i2cw_H_
+#endif  // I2C_WRAPPER_H_
