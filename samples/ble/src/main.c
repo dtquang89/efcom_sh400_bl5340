@@ -1,12 +1,7 @@
-/*
- * Copyright (c) 2018 Nordic Semiconductor ASA
- *
- * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
- */
-
-/** @file
+/** @file main.c
  *  @brief Nordic UART Bridge Service (NUS) sample
  */
+
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/uart.h>
@@ -19,13 +14,23 @@ LOG_MODULE_REGISTER(app, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define BUFFER_SIZE CONFIG_BT_NUS_UART_BUFFER_SIZE
 
+/**
+ * @brief Buffer for BLE UART data.
+ */
 struct buffer_data_t
 {
     uint8_t data[BUFFER_SIZE];
     uint16_t len;
 };
 
-/* Perform an echo test */
+/**
+ * @brief Callback for received BLE data (NUS).
+ *
+ * Echoes received data back to BLE and logs it.
+ *
+ * @param data Pointer to received data.
+ * @param len  Length of received data.
+ */
 static void ble_receive_cb(const uint8_t* data, uint16_t len)
 {
     uint16_t pos = 0;
@@ -55,6 +60,13 @@ static void ble_receive_cb(const uint8_t* data, uint16_t len)
     }
 }
 
+/**
+ * @brief Main entry point for BLE UART sample.
+ *
+ * Initializes BLE, registers callbacks, and runs main loop.
+ *
+ * @return 0 Always returns 0.
+ */
 int main(void)
 {
     LOG_INF("Starting Bluetooth Peripheral UART example");

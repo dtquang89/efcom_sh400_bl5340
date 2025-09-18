@@ -1,3 +1,14 @@
+/**
+ * @file main.c
+ * @author Quang Duong
+ * @brief Battery measurement sample.
+ * @version 0.1
+ * @date 2025-09-17
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -19,17 +30,27 @@ static struct adc_dt_spec adc_channel =
 /* Analog wrapper context */
 static struct analog_control_t adc_ctx;
 
-/* --- Callback functions --- */
-static void pre_measurement_cb(void* user_handle)
-{
-    LOG_DBG("Pre-measurement callback (user=%p)", user_handle);
-}
+/**
+ * @brief Pre-measurement callback for analog read.
+ *
+ * @param user_handle User context pointer.
+ */
+static void pre_measurement_cb(void* user_handle);
 
-static void post_measurement_cb(void* user_handle)
-{
-    LOG_DBG("Post-measurement callback (user=%p)", user_handle);
-}
+/**
+ * @brief Post-measurement callback for analog read.
+ *
+ * @param user_handle User context pointer.
+ */
+static void post_measurement_cb(void* user_handle);
 
+/**
+ * @brief Main entry point for battery measurement sample.
+ *
+ * Initializes ADC, registers callbacks, and periodically reads battery voltage.
+ *
+ * @return 0 Always returns 0.
+ */
 int main(void)
 {
     LOG_INF("Starting Battery measurement sample");

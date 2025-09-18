@@ -1,4 +1,10 @@
-/*
+/**
+ * @file main.c
+ * @brief Internal flash storage sample for Zephyr.
+ *
+ * Demonstrates erase, write, read, and page info APIs for internal flash.
+ * Compatible with nRF SoCs and Zephyr flash API.
+ *
  * Copyright (c) 2016 Linaro Limited
  *               2016 Intel Corporation.
  * Copyright (c) 2024 Nordic Semiconductor ASA
@@ -37,9 +43,16 @@
 #endif
 
 /**
- * Depending on value of condition erase a device or not. The condition
- * is supposed to be value of erase_requirement picked up from
+ * @brief Erase flash region if required by device.
+ *
+ * Depending on value of condition, erase a device or not.
+ * The condition is supposed to be value of erase_requirement picked up from
  * flash_parameters.flags for device.
+ *
+ * @param dev      Flash device pointer.
+ * @param condition True if erase is required.
+ * @param off      Offset to start erasing.
+ * @param size     Size to erase in bytes.
  */
 static void erase_when_needed(const struct device* dev, bool condition, uint32_t off, uint32_t size)
 {
@@ -62,8 +75,10 @@ static void erase_when_needed(const struct device* dev, bool condition, uint32_t
     }
 }
 
-/*
- * Fill test data with incrementing values
+/**
+ * @brief Fill test data buffer with incrementing values.
+ *
+ * @param test_data_buf Buffer to fill.
  */
 static void prepare_test_data(uint8_t* test_data_buf)
 {
@@ -74,10 +89,16 @@ static void prepare_test_data(uint8_t* test_data_buf)
     }
 }
 
-/*
- * The function align writes with write-block-size of a device,
- * the additional_address_offset parameter can be
- * used to de-align writes by a provided value.
+/**
+ * @brief Write and verify test data to flash.
+ *
+ * The function aligns writes with write-block-size of a device.
+ * The additional_address_offset parameter can be used to de-align writes by a provided value.
+ *
+ * @param flash_dev Flash device pointer.
+ * @param test_data Data buffer to write.
+ * @param write_block_size Write block size of device.
+ * @param addtitonal_address_offset Offset to de-align writes.
  */
 static void write_and_verify_test_data(const struct device* flash_dev, uint8_t* test_data, uint8_t write_block_size,
                                        uint8_t addtitonal_address_offset)
@@ -112,6 +133,13 @@ static void write_and_verify_test_data(const struct device* flash_dev, uint8_t* 
     }
 }
 
+/**
+ * @brief Main entry point for flash storage sample.
+ *
+ * Runs a series of erase, write, read, and page info tests on internal flash.
+ *
+ * @return 0 Always returns 0.
+ */
 int main(void)
 {
     uint32_t offset;
