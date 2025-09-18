@@ -1,8 +1,8 @@
 # Copyright (c) 2021, Legrand North America, LLC.
 # SPDX-License-Identifier: Apache-2.0
 
-config BLE_WRAPPER
-	bool "BLE wrapper library"
+config SD_CARD_LIB
+	bool "SD Card Support"
 	default n
 	help
-	  This option enables the BLE wrapper library
+	  This option enables the sdcard library

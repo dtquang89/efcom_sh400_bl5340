@@ -27,28 +27,33 @@
 		};
 
 		drc_in_1: drc_in_1 {
-            gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio0 22 GPIO_ACTIVE_LOW>;
             label = "Dry contact Input 1";
+			zephyr,code = <INPUT_KEY_1>;
         };
 
 		drc_in_2: drc_in_2 {
-            gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio0 23 GPIO_ACTIVE_LOW>;
             label = "Dry contact Input 2";
+			zephyr,code = <INPUT_KEY_2>;
         };
 
 		sdst: sdst {
-            gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
             label = "MicroSD card Status";
+			zephyr,code = <INPUT_KEY_3>;
         };
 
 		power_good: power_good {
-            gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
             label = "Power source Status";
+			zephyr,code = <INPUT_KEY_4>;
         };
 
 		charge_st: charge_st {
-            gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
             label = "Battery Charging Status";
+			zephyr,code = <INPUT_KEY_5>;
         };
 	};
 
@@ -112,7 +117,7 @@
 	voltage_divider {
         compatible = "voltage-divider";
 
-        io-channels = <&adc 7>; // AIN7
+        io-channels = <&adc 0>; // AIN7
         output-ohms = <249000>;
         full-ohms = <(249000 + 100000)>;
     };
@@ -122,7 +127,6 @@
 		led0 = &led0;
         led1 = &led1;
         led2 = &led2;
-        pwm-led0 = &green_pwm_led;
 		red-pwm-led = &red_pwm_led;
 		green-pwm-led = &green_pwm_led;
 		blue-pwm-led = &blue_pwm_led;
@@ -143,6 +147,21 @@
 
 &adc {
     status = "okay";
+
+	#address-cells = <1>;
+    #size-cells = <0>;
+
+    io-channels = <&adc 0>;
+
+    battery_meas: channel@0 {
+        reg = <0>;
+        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+        zephyr,input-positive = <NRF_SAADC_AIN7>;
+        zephyr,resolution = <14>;
+        zephyr,oversampling = <8>;
+    };
 };
 
 &gpiote {
@@ -176,10 +195,9 @@
         mclk-frequency = <13000000>; /* please change according to your application */
     };
 
-	extrtc0: max31341@d2 {
+	extrtc0: max31341@69 {
         compatible = "adi,max31341";
-        status = "okay";
-        reg = <0xd2>;                  /* I2C address (0xD2) */
+        reg = <0x69>;                  /* I2C address (0xD2) */
         int-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
     };
 };
