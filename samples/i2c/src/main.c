@@ -1,6 +1,10 @@
-/*
- * Copyright (c) 2016 Intel Corporation
+/**
+ * @file main.c
+ * @brief MAX31341 RTC I2C sample for Zephyr.
  *
+ * Demonstrates reading the device ID from the MAX31341 RTC using Zephyr I2C API.
+ *
+ * Copyright (c) 2016 Intel Corporation
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -16,16 +20,18 @@ LOG_MODULE_REGISTER(main);
 
 #define I2C_NODE DT_NODELABEL(i2c1)
 
-/* MAX31341 RTC I2C Configuration */
-#define MAX31341_I2C_ADDR 0x69  // 7-bit I2C address from DT
-#define MAX31341_REG_ID   0x59  // Revision ID register
+/** @brief MAX31341 RTC I2C address (7-bit). */
+#define MAX31341_I2C_ADDR 0x69
+/** @brief MAX31341 revision ID register address. */
+#define MAX31341_REG_ID 0x59
 
 /**
- * @brief Read a single register from MAX31341 RTC
+ * @brief Read a single register from MAX31341 RTC.
  *
- * @param reg_addr Register address to read
- * @param data Pointer to store read data
- * @return 0 on success, negative error code on failure
+ * @param dev      I2C device pointer.
+ * @param reg_addr Register address to read.
+ * @param data     Pointer to store read data.
+ * @return 0 on success, negative error code on failure.
  */
 static int max31341_read_reg(const struct device* dev, uint8_t reg_addr, uint8_t* data)
 {
@@ -41,10 +47,10 @@ static int max31341_read_reg(const struct device* dev, uint8_t reg_addr, uint8_t
 }
 
 /**
- * @brief Read manufacturer/device ID from MAX31341 RTC
+ * @brief Read manufacturer/device ID from MAX31341 RTC.
  *
- * @param id_data Array to store 1 bytes of ID data
- * @return 0 on success, negative error code on failure
+ * @param id_data Pointer to store 1 byte of ID data.
+ * @return 0 on success, negative error code on failure.
  */
 int max31341_read_device_id(uint8_t* id_data)
 {
@@ -76,7 +82,13 @@ int max31341_read_device_id(uint8_t* id_data)
     return 0;
 }
 
-/* Example usage in main thread */
+/**
+ * @brief Main entry point for MAX31341 RTC ID reader sample.
+ *
+ * Reads the device ID from the RTC and prints it to the log.
+ *
+ * @return 0 Always returns 0.
+ */
 int main(void)
 {
     uint8_t device_id;
