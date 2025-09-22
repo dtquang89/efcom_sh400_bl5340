@@ -1,3 +1,14 @@
+/**
+ * @file pwm_wrapper.h
+ * @author Quang Duong
+ * @brief PWM wrapper API for Zephyr-based projects.
+ * @version 0.1
+ * @date 2025-09-17
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PWM_WRAPPER_H_
 #define PWM_WRAPPER_H_
 

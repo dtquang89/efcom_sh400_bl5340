@@ -1,52 +1,51 @@
-/*****
- * @copyright (c) 2023 Freelancer
+/**
+ * @file main.c
+ * @brief SD card and filesystem sample for Zephyr.
  *
- * @brief
- *
- *
- * @details
- *
+ * Demonstrates mounting, listing, and writing to an SD card using the filesystem API and SDHC driver.
  *
  * @author Quang Duong
- * @date 13.12.2023
- *
- *****/
+ * @date 13.09.2025
+ */
 
-/* Sample which uses the filesystem API and SDHC driver */
-
+#include <ff.h>
 #include <zephyr/device.h>
 #include <zephyr/fs/fs.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/storage/disk_access.h>
-
 #include "sdcard.h"
 
-#include <ff.h>
-
 /*
- *  Note the fatfs library is able to mount only strings inside _VOLUME_STRS
- *  in ffconf.h
+ * Note: The fatfs library can only mount strings inside _VOLUME_STRS in ffconf.h
  */
 
 #define TEST_FILE DISK_MOUNT_PT "/TEST01.TXT"
 
 static FATFS fat_fs;
-/* mounting info */
+/** @brief Filesystem mount info. */
 static struct fs_mount_t mp = {
     .type = FS_FATFS,
     .fs_data = &fat_fs,
 };
+/** @brief File handle for test file. */
 struct fs_file_t filep;
+/** @brief Test string to write to file. */
 char test_str[] = "7,8,9\n";
-
+/** @brief SD card mount point. */
 const char* disk_mount_pt = DISK_MOUNT_PT;
 
 LOG_MODULE_REGISTER(main);
 
+/**
+ * @brief Main entry point for SD card sample.
+ *
+ * Initializes SD card, mounts filesystem, lists directory, and writes to a file in a loop.
+ *
+ * @return 0 Always returns 0.
+ */
 int main(void)
 {
-
     /* raw disk i/o */
     do {
         static const char* disk_pdrv = DISK_DRIVE_NAME;
@@ -62,7 +61,7 @@ int main(void)
         if (disk_access_status(disk_pdrv) != DISK_STATUS_OK) {
             LOG_ERR("Disk status not OK!");
             break;
-        };
+        }
 
         if (disk_access_ioctl(disk_pdrv, DISK_IOCTL_GET_SECTOR_COUNT, &block_count)) {
             LOG_ERR("Unable to get sector count");

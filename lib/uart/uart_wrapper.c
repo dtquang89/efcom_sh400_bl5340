@@ -15,13 +15,6 @@
 
 LOG_MODULE_REGISTER(uart_wrp, CONFIG_UART_WRAPPER_LOG_LEVEL);
 
-struct tx_node
-{
-    void* fifo_reserved;
-    size_t len;
-    uint8_t data[];
-};
-
 #if CONFIG_UART_ASYNC_API
 static void uaw_uart_cb(const struct device* dev, struct uart_event* evt, void* user_data)
 {

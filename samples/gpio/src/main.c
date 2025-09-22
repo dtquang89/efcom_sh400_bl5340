@@ -1,6 +1,10 @@
-/*
- * Copyright (c) 2016 Intel Corporation
+/**
+ * @file main.c
+ * @brief GPIO sample application for Zephyr.
  *
+ * Demonstrates basic GPIO input (button) and output (LED) usage with wrapper API.
+ *
+ * Copyright (c) 2016 Intel Corporation
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -24,11 +28,27 @@ static const struct gpio_dt_spec led_spec = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static struct gpiow led;
 static struct gpiow button;
 
+/**
+ * @brief Callback for button press event.
+ *
+ * Called when the button input pin triggers an interrupt.
+ *
+ * @param dev GPIO device pointer.
+ * @param cb  GPIO callback structure pointer.
+ * @param pins Bitmask of pins that triggered the callback.
+ */
 static void button_pressed_cb(const struct device* dev, struct gpio_callback* cb, uint32_t pins)
 {
     LOG_INF("Button pressed!");
 }
 
+/**
+ * @brief Main entry point for GPIO sample.
+ *
+ * Initializes GPIO pins, registers button callback, and toggles LED in a loop.
+ *
+ * @return 0 Always returns 0.
+ */
 int main(void)
 {
     LOG_INF("Starting the application...");

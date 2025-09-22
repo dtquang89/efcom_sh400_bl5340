@@ -1,6 +1,10 @@
-/*
- * Copyright (c) 2016 Intel Corporation
+/**
+ * @file main.c
+ * @brief PWM RGB LED sample for Zephyr.
  *
+ * Demonstrates basic RGB LED color cycling using PWM wrapper API.
+ *
+ * Copyright (c) 2016 Intel Corporation
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -13,15 +17,26 @@
 
 LOG_MODULE_REGISTER(main);
 
-/* Sleep time */
+/** @brief Sleep time between color changes (milliseconds). */
 #define SLEEP_TIME_MS 1000
 
-/* Example: button on DT node label "red-pwm-led" */
+/** @brief PWM spec for red LED (from devicetree). */
 static const struct pwm_dt_spec red_pwm = PWM_DT_SPEC_GET(PWM_RED_NODE);
+/** @brief PWM spec for green LED (from devicetree). */
 static const struct pwm_dt_spec green_pwm = PWM_DT_SPEC_GET(PWM_GREEN_NODE);
+/** @brief PWM spec for blue LED (from devicetree). */
 static const struct pwm_dt_spec blue_pwm = PWM_DT_SPEC_GET(PWM_BLUE_NODE);
 
+/** @brief RGB LED context. */
 static struct pwm_rgb rgb;
+
+/**
+ * @brief Main entry point for PWM RGB LED sample.
+ *
+ * Initializes RGB LED context and cycles through colors using PWM.
+ *
+ * @return 0 Always returns 0.
+ */
 
 int main(void)
 {
