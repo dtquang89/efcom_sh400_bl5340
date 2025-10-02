@@ -35,7 +35,7 @@ int lsdir(const char* path)
         return res;
     }
 
-    LOG_DBG("Listing dir %s ...", path);
+    LOG_INF("Listing dir %s ...", path);
     for (;;) {
         /* Verify fs_readdir() */
         res = fs_readdir(&dirp, &entry);
@@ -46,10 +46,10 @@ int lsdir(const char* path)
         }
 
         if (entry.type == FS_DIR_ENTRY_DIR) {
-            LOG_DBG("[DIR ] %s", entry.name);
+            LOG_INF("[DIR ] %s", entry.name);
         }
         else {
-            LOG_DBG("[FILE] %s (size = %zu)", entry.name, entry.size);
+            LOG_INF("[FILE] %s (size = %zu)", entry.name, entry.size);
         }
         count++;
     }
@@ -75,58 +75,58 @@ int check_file_dir_exists(const char* path)
     return !res;
 }
 
-int sd_card_file_write(struct fs_file_t file, const char* file_path, char* text_str, size_t text_str_size)
+int sd_card_file_write(struct fs_file_t* file, const char* file_path, char* text_str, size_t text_str_size)
 {
     ssize_t brw;
     int res;
 
-    fs_file_t_init(&file);
+    fs_file_t_init(file);
 
     if (check_file_dir_exists(file_path)) {
         LOG_DBG("Opening existing file %s", file_path);
-        res = fs_open(&file, file_path, FS_O_APPEND | FS_O_RDWR);
+        res = fs_open(file, file_path, FS_O_APPEND | FS_O_RDWR);
     }
     else {
         LOG_DBG("Creating new file %s", file_path);
-        res = fs_open(&file, file_path, FS_O_CREATE | FS_O_RDWR);
+        res = fs_open(file, file_path, FS_O_CREATE | FS_O_RDWR);
     }
 
     /* Verify fs_open() */
     if (res) {
         LOG_ERR("Failed opening file [%d]", res);
-        fs_close(&file);
+        fs_close(file);
         return res;
     }
 
     /* Verify fs_seek() */
-    res = fs_seek(&file, 0, FS_SEEK_SET);
+    res = fs_seek(file, 0, FS_SEEK_SET);
     if (res) {
         LOG_ERR("fs_seek failed [%d]", res);
-        fs_close(&file);
+        fs_close(file);
         return res;
     }
 
     LOG_INF("Data written:\"%s\"", text_str);
 
     /* Verify fs_write() */
-    brw = fs_write(&file, (char*)text_str, text_str_size);
+    brw = fs_write(file, (char*)text_str, text_str_size);
     if (brw < 0) {
         LOG_ERR("Failed writing to file [%zd]", brw);
-        fs_close(&file);
+        fs_close(file);
         return brw;
     }
 
     if (brw < text_str_size) {
         LOG_ERR("Unable to complete write. Volume full.");
         LOG_ERR("Number of bytes written: [%zd]", brw);
-        fs_close(&file);
+        fs_close(file);
         return -1;
     }
 
     LOG_DBG("Data successfully written!");
 
     /* Verify fs_sync() */
-    res = fs_sync(&file);
+    res = fs_sync(file);
     if (res) {
         LOG_ERR("Error syncing file [%d]", res);
         return res;
@@ -134,7 +134,7 @@ int sd_card_file_write(struct fs_file_t file, const char* file_path, char* text_
 
     LOG_DBG("Data successfully synced!");
 
-    res = fs_close(&file);
+    res = fs_close(file);
     if (res) {
         LOG_ERR("Error closing file [%d]", res);
         return res;
@@ -145,13 +145,11 @@ int sd_card_file_write(struct fs_file_t file, const char* file_path, char* text_
     return res;
 }
 
-int sd_card_file_read(struct fs_file_t file, const char* file_path, char* text_str, size_t text_str_size)
+int sd_card_file_open(struct fs_file_t* file, const char* file_path, off_t skip_bytes)
 {
-    ssize_t brw;
     int res;
-    char read_buff[80];
 
-    fs_file_t_init(&file);
+    fs_file_t_init(file);
 
     if (!check_file_dir_exists(file_path)) {
         LOG_INF("File does not exist %s", file_path);
@@ -159,41 +157,48 @@ int sd_card_file_read(struct fs_file_t file, const char* file_path, char* text_s
     }
 
     /* Verify fs_open() */
-    res = fs_open(&file, file_path, FS_O_READ);
+    res = fs_open(file, file_path, FS_O_READ);
     if (res) {
         LOG_ERR("Failed opening file [%d]", res);
-        fs_close(&file);
+        fs_close(file);
         return res;
     }
 
-    res = fs_seek(&file, 0, FS_SEEK_SET);
+    res = fs_seek(file, skip_bytes, FS_SEEK_SET);
     if (res) {
         LOG_ERR("fs_seek failed [%d]", res);
-        fs_close(&file);
+        fs_close(file);
         return res;
     }
 
-    /* Verify fs_read() */
-    brw = fs_read(&file, read_buff, text_str_size);
-    if (brw < 0) {
-        LOG_ERR("Failed reading file [%zd]", brw);
-        fs_close(&file);
-        return brw;
-    }
-
-    read_buff[brw] = 0;
-
-    LOG_DBG("Data read:\"%s\"", read_buff);
-
-    if (strcmp(text_str, read_buff)) {
-        LOG_INF("Error - Data read does not match data written");
-        LOG_INF("Data read:\"%s\"", read_buff);
-        return -EINVAL;
-    }
-
-    LOG_DBG("Data read matches data written");
+    LOG_INF("Opened file %s", file_path);
 
     return res;
+}
+
+int sd_card_file_read(struct fs_file_t* file, void* buffer, size_t size)
+{
+    ssize_t read_bytes;
+
+    /* Verify fs_read() */
+    read_bytes = fs_read(file, buffer, size);
+    if (read_bytes < 0) {
+        LOG_ERR("Failed reading file [%zd]", read_bytes);
+        fs_close(file);
+    }
+
+    return read_bytes;
+}
+
+void sd_card_file_close(struct fs_file_t* file)
+{
+    int ret = fs_close(file);
+    if (ret < 0) {
+        LOG_ERR("Failed to close file, err: %d", ret);
+    }
+    else {
+        LOG_INF("Closed file");
+    }
 }
 
 int sd_card_mkdir(char* folder_name)

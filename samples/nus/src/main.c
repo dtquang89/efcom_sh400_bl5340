@@ -9,6 +9,7 @@
  */
 #include <uart_async_adapter.h>
 
+#include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
@@ -25,12 +26,28 @@
 
 #include <bluetooth/services/nus.h>
 
-#include <dk_buttons_and_leds.h>
+#if CONFIG_DK_LIBRARY
+    #include <dk_buttons_and_leds.h>
+#else
+    #include "gpio_wrapper.h"
+#endif
 
 #include <zephyr/settings/settings.h>
 
 #include <stdio.h>
 #include <string.h>
+
+#include "dt_interfaces.h"
+
+#include "analog_wrapper.h"
+#include "pwm_wrapper.h"
+
+#include <ff.h>
+#include <zephyr/fs/fs.h>
+#include <zephyr/storage/disk_access.h>
+#include "sdcard.h"
+
+#include <zephyr/drivers/i2s.h>
 
 #include <zephyr/logging/log.h>
 
@@ -43,10 +60,10 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-#define RUN_STATUS_LED         DK_LED1
+// #define RUN_STATUS_LED         LED0_NODE
 #define RUN_LED_BLINK_INTERVAL 1000
 
-#define CON_STATUS_LED DK_LED2
+// #define CON_STATUS_LED LED1_NODE
 
 #define KEY_PASSKEY_ACCEPT DK_BTN1_MSK
 #define KEY_PASSKEY_REJECT DK_BTN2_MSK
@@ -55,6 +72,69 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define UART_WAIT_FOR_BUF_DELAY K_MSEC(50)
 #define UART_WAIT_FOR_RX        CONFIG_BT_NUS_UART_RX_WAIT_TIME
 
+#define I2C_NODE DT_NODELABEL(i2c1)
+
+/** @brief MAX31341 RTC I2C address (7-bit). */
+#define MAX31341_I2C_ADDR 0x69
+/** @brief MAX31341 revision ID register address. */
+#define MAX31341_REG_ID 0x59
+
+/* GPIO variables definition */
+static const struct gpio_dt_spec led0_spec = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct gpio_dt_spec led1_spec = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
+static const struct gpio_dt_spec led2_spec = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
+static struct gpiow led0;
+static struct gpiow led1;
+static struct gpiow led2;
+
+/* PWM variables definition */
+/** @brief PWM spec for red LED (from devicetree). */
+static const struct pwm_dt_spec red_pwm = PWM_DT_SPEC_GET(PWM_RED_NODE);
+/** @brief PWM spec for green LED (from devicetree). */
+static const struct pwm_dt_spec green_pwm = PWM_DT_SPEC_GET(PWM_GREEN_NODE);
+/** @brief PWM spec for blue LED (from devicetree). */
+static const struct pwm_dt_spec blue_pwm = PWM_DT_SPEC_GET(PWM_BLUE_NODE);
+
+/** @brief RGB LED context. */
+static struct pwm_rgb rgb;
+
+/* ADC variables definition */
+/* Build ADC channel spec directly from devicetree */
+static struct adc_dt_spec adc_channel =
+#if HAS_VOLTAGE_DIVIDER
+    ADC_DT_SPEC_GET(VBATT_NODE)
+#else
+    ADC_SPEC
+#endif
+    ;
+
+/* Analog wrapper context */
+static struct analog_control_t adc_ctx;
+
+/* SD Card */
+#define TEST_FILE DISK_MOUNT_PT "/test.wav"
+
+static FATFS fat_fs;
+/** @brief Filesystem mount info. */
+static struct fs_mount_t mp = {
+    .type = FS_FATFS,
+    .fs_data = &fat_fs,
+};
+/** @brief File handle for test file. */
+struct fs_file_t filep;
+/** @brief SD card mount point. */
+const char* disk_mount_pt = DISK_MOUNT_PT;
+
+/* I2S */
+#define NUMBER_OF_INIT_BUFFER 4
+#define NUM_BLOCKS            20
+#define BLOCK_SIZE            4 * 1024
+
+static const struct device* dev_i2s = DEVICE_DT_GET(DT_NODELABEL(i2s_rxtx));
+
+K_MEM_SLAB_DEFINE(tx_0_mem_slab, BLOCK_SIZE, NUM_BLOCKS, 4);
+
+/* BLE UART variables definition */
 static K_SEM_DEFINE(ble_init_ok, 0, 1);
 
 static struct bt_conn* current_conn;
@@ -363,6 +443,8 @@ static void connected(struct bt_conn* conn, uint8_t err)
     current_conn = bt_conn_ref(conn);
 #if CONFIG_DK_LIBRARY
     dk_set_led_on(CON_STATUS_LED);
+#else
+    gpiow_set(&led1, 1);
 #endif
 }
 
@@ -384,6 +466,8 @@ static void disconnected(struct bt_conn* conn, uint8_t reason)
         current_conn = NULL;
 #if CONFIG_DK_LIBRARY
         dk_set_led_off(CON_STATUS_LED);
+#else
+        gpiow_set(&led1, 0);
 #endif
     }
 }
@@ -582,11 +666,11 @@ void button_changed(uint32_t button_state, uint32_t has_changed)
     #endif
 #endif /* CONFIG_BT_NUS_SECURITY_ENABLED */
 
-#if CONFIG_DK_LIBRARY
 static void configure_gpio(void)
 {
     int err;
 
+#if CONFIG_DK_LIBRARY
     #ifdef CONFIG_BT_NUS_SECURITY_ENABLED
     err = dk_buttons_init(button_changed);
     if (err) {
@@ -598,17 +682,376 @@ static void configure_gpio(void)
     if (err) {
         LOG_ERR("Cannot init LEDs (err: %d)", err);
     }
+#else
+    err = gpiow_init(&led0, &led0_spec, GPIOW_DIR_OUTPUT, GPIO_OUTPUT_INIT_HIGH | GPIO_OUTPUT_INIT_LOGICAL);
+    if (err < 0) {
+        LOG_ERR("Failed to init led0: %d", err);
+    }
+
+    err = gpiow_init(&led1, &led1_spec, GPIOW_DIR_OUTPUT, GPIO_OUTPUT_INIT_HIGH | GPIO_OUTPUT_INIT_LOGICAL);
+    if (err < 0) {
+        LOG_ERR("Failed to init led1: %d", err);
+    }
+
+    err = gpiow_init(&led2, &led2_spec, GPIOW_DIR_OUTPUT, GPIO_OUTPUT_INIT_HIGH | GPIO_OUTPUT_INIT_LOGICAL);
+    if (err < 0) {
+        LOG_ERR("Failed to init led2: %d", err);
+    }
+#endif
 }
-#endif /* CONFIG_DK_LIBRARY */
+
+static void configure_pwm(void)
+{
+    int ret = pwm_rgb_init(&rgb, red_pwm.dev, red_pwm.channel, green_pwm.channel, blue_pwm.channel, red_pwm.period);
+
+    if (ret < 0) {
+        LOG_ERR("TEST FAILED: RGB init failed");
+    }
+}
+
+static int i2s_init(void)
+{
+    struct i2s_config i2s_cfg;
+    int ret;
+
+    if (!device_is_ready(dev_i2s)) {
+        LOG_ERR("I2S device not ready");
+        return -ENODEV;
+    }
+    /* Configure I2S stream */
+    i2s_cfg.word_size = 16U;
+    i2s_cfg.channels = 2U;
+    i2s_cfg.format = I2S_FMT_DATA_FORMAT_I2S;
+    i2s_cfg.frame_clk_freq = 16000;
+    i2s_cfg.block_size = BLOCK_SIZE;
+    i2s_cfg.timeout = 2000;
+    /* Configure the Transmit port as Master */
+    i2s_cfg.options = I2S_OPT_FRAME_CLK_MASTER | I2S_OPT_BIT_CLK_MASTER;
+    i2s_cfg.mem_slab = &tx_0_mem_slab;
+    ret = i2s_configure(dev_i2s, I2S_DIR_TX, &i2s_cfg);
+    if (ret < 0) {
+        LOG_ERR("Failed to configure I2S stream");
+        return ret;
+    }
+
+    return 0;
+}
+
+static int play_sound_from_sd_card(const struct device* dev, struct fs_file_t* file)
+{
+    bool i2s_started = false;
+    uint8_t the_number_of_init_buffer = 0;
+    int err;
+
+    // Playback loop
+    while (1) {
+        // Allocate memory for I2S TX
+        void* tx_0_mem_block;
+
+        err = k_mem_slab_alloc(&tx_0_mem_slab, &tx_0_mem_block, K_NO_WAIT);
+        if (err) {
+            LOG_ERR("Failed to allocate TX block: %d", err);
+            break;
+        }
+
+        /* Read data from file*/
+        int num_read_bytes = sd_card_file_read(file, tx_0_mem_block, BLOCK_SIZE);
+        if (num_read_bytes < 0) {
+            LOG_ERR("Error read file: error %d", err);
+            break;
+        }
+        else if (num_read_bytes == 0) {
+            LOG_INF("Reached end of file");
+            k_mem_slab_free(&tx_0_mem_slab, tx_0_mem_block);
+            break;
+        }
+
+        /* Playback data on I2S */
+        LOG_INF("[PLAYING] Read bytes: %d", num_read_bytes);
+
+        err = i2s_write(dev, tx_0_mem_block, BLOCK_SIZE);
+        if (err) {
+            k_mem_slab_free(&tx_0_mem_slab, tx_0_mem_block);
+            LOG_ERR("Failed to write data: %d", err);
+            break;
+        }
+
+        the_number_of_init_buffer++;
+        if (the_number_of_init_buffer == NUMBER_OF_INIT_BUFFER && i2s_started == false) {
+            // make sure to filled THE_NUMBER_OF_INIT_BUFFER before starting i2s
+            LOG_INF("Start I2S: %d", the_number_of_init_buffer);
+            i2s_started = true;
+            err = i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_START);
+            if (err < 0) {
+                LOG_INF("Could not start I2S tx: %d", err);
+                return err;
+            }
+        }
+    }
+
+    // Stop TX queue
+    err = i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_STOP);
+    if (err < 0) {
+        LOG_INF("Could not stop I2S tx: %d", err);
+        return err;
+    }
+    LOG_INF("All I2S blocks written");
+
+    return 0;
+}
+
+static int i2s_sdcard_test(void)
+{
+    /* raw disk i/o */
+    do {
+        static const char* disk_pdrv = DISK_DRIVE_NAME;
+        uint64_t memory_size_mb;
+        uint32_t block_count;
+        uint32_t block_size;
+
+        if (disk_access_init(disk_pdrv) != 0) {
+            LOG_ERR("Storage init ERROR!");
+            return -EPERM;
+        }
+
+        if (disk_access_status(disk_pdrv) != DISK_STATUS_OK) {
+            LOG_ERR("Disk status not OK!");
+            return -ENODEV;
+        }
+
+        if (disk_access_ioctl(disk_pdrv, DISK_IOCTL_GET_SECTOR_COUNT, &block_count)) {
+            LOG_ERR("Unable to get sector count");
+            return -EINVAL;
+        }
+        LOG_INF("Block count %u", block_count);
+
+        if (disk_access_ioctl(disk_pdrv, DISK_IOCTL_GET_SECTOR_SIZE, &block_size)) {
+            LOG_ERR("Unable to get sector size");
+            return -EINVAL;
+        }
+        LOG_INF("Sector size %u", block_size);
+
+        memory_size_mb = (uint64_t)block_count * block_size;
+        LOG_INF("Memory Size(MB) %u", (uint32_t)(memory_size_mb >> 20));
+    } while (0);
+
+    mp.mnt_point = disk_mount_pt;
+
+    int res = fs_mount(&mp);
+
+    if (res == FR_OK) {
+        LOG_INF("Disk mounted.");
+        res = lsdir(disk_mount_pt);
+        if (res != 0) {
+            LOG_ERR("Error listing disk: err %d", res);
+        }
+    }
+    else {
+        LOG_ERR("Error mounting disk: error %d", res);
+        return -ENXIO;
+    }
+
+    /* Init I2S */
+    int err = i2s_init();
+
+    if (err < 0) {
+        LOG_ERR("I2S initialization failed");
+        return err;
+    }
+
+    /* Open file from SD card */
+    err = sd_card_file_open(&filep, TEST_FILE, 44);  // Skip WAV header, 44 bytes
+    if (err != 0) {
+        LOG_ERR("Error open file: error %d", err);
+        return err;
+    }
+
+    /* Play the file to I2S */
+    err = play_sound_from_sd_card(dev_i2s, &filep);
+    if (err) {
+        LOG_ERR("Error playing sound from SD card: %d", err);
+    }
+
+    /* Close file */
+    sd_card_file_close(&filep);
+
+    /* Unmound SD card */
+    fs_unmount(&mp);
+    LOG_INF("I2S+SDCARD: Test run ended!");
+
+    return 0;
+}
+
+/**
+ * @brief Pre-measurement callback for analog read.
+ *
+ * @param user_handle User context pointer.
+ */
+static void pre_battery_measurement_cb(void* user_handle)
+{
+    ARG_UNUSED(user_handle);
+    /* Nothing to do */
+}
+
+/**
+ * @brief Post-measurement callback for analog read.
+ *
+ * @param user_handle User context pointer.
+ */
+static void post_battery_measurement_cb(void* user_handle)
+{
+    ARG_UNUSED(user_handle);
+    /* Nothing to do */
+}
+
+static int battery_test(void)
+{
+    int ret;
+    int32_t batt_mv;
+    int batt_pct;
+
+#if !HAS_VOLTAGE_DIVIDER
+    LOG_INF("No voltage divider configured, make sure the input voltage is within the ADC range!");
+#else
+    LOG_INF("Using voltage divider");
+#endif
+
+    /* Initialize wrapper */
+    ret = analog_init(&adc_ctx, &adc_channel);
+    if (ret) {
+        LOG_ERR("ADC init failed (%d)", ret);
+        return -1;
+    }
+
+    /* Register callbacks */
+    analog_callbacks_t cbs = {
+        .pre_measurement = pre_battery_measurement_cb,
+        .post_measurement = post_battery_measurement_cb,
+    };
+    analog_register_callbacks(&adc_ctx, &cbs, NULL);
+
+    ret = analog_read_battery_mv(&adc_ctx, &batt_mv);
+    if (ret) {
+        LOG_ERR("Failed to read battery voltage (%d)", ret);
+        return -2;
+    }
+    else {
+        batt_pct = analog_get_battery_level(&adc_ctx, 1100, 3300);
+        LOG_INF("Battery: %d mV (%d%%)", batt_mv, batt_pct);
+    }
+
+    /* Not reached, but if you ever stop: */
+    analog_deinit(&adc_ctx);
+
+    return 0;
+}
+
+static int gpio_led_test(void)
+{
+    int err = 0;
+
+    err += gpiow_set(&led0, 1);
+    err += gpiow_set(&led1, 1);
+    err += gpiow_set(&led2, 1);
+    k_sleep(K_SECONDS(1));
+    err += gpiow_set(&led0, 0);
+    err += gpiow_set(&led1, 0);
+    err += gpiow_set(&led2, 0);
+    k_sleep(K_SECONDS(1));
+
+    return err;
+}
+
+static int pwm_rgb_test(void)
+{
+    int err = pwm_rgb_set_color(&rgb, 255, 0, 0); /* Red */
+    k_sleep(K_SECONDS(1));
+    err += pwm_rgb_set_color(&rgb, 0, 255, 0); /* Green */
+    k_sleep(K_SECONDS(1));
+    err += pwm_rgb_set_color(&rgb, 0, 0, 255); /* Blue */
+    k_sleep(K_SECONDS(1));
+    err += pwm_rgb_off(&rgb);
+    k_sleep(K_SECONDS(1));
+
+    return err;
+}
+
+static int i2c_read_reg(const struct device* dev, uint8_t reg_addr, uint8_t* data)
+{
+    int ret;
+
+    ret = i2c_write_read(dev, MAX31341_I2C_ADDR, &reg_addr, 1, data, 1);
+    if (ret != 0) {
+        LOG_ERR("Failed to read register 0x%02X: %d", reg_addr, ret);
+        return ret;
+    }
+
+    return 0;
+}
+
+static int i2c_max31341_read_device_id_test()
+{
+    int ret;
+    uint8_t reg_val;
+
+    /* Verify RTC device is ready */
+    const struct device* rtc_dev = DEVICE_DT_GET(I2C_NODE);
+    if (!device_is_ready(rtc_dev)) {
+        LOG_WRN("RTC device not ready, proceeding with I2C access");
+    }
+
+    LOG_INF("I2C device i2c1 ready");
+
+    /* I2C is already configured via device tree, no need to reconfigure */
+    LOG_INF("Using I2C address 0x%02X for MAX31341 RTC", MAX31341_I2C_ADDR);
+
+    /* Read ID registers */
+    ret = i2c_read_reg(rtc_dev, MAX31341_REG_ID, &reg_val);
+    if (ret != 0) {
+        LOG_ERR("Failed to read ID register");
+        return ret;
+    }
+
+    LOG_INF("Device ID: 0x%02X", reg_val);
+
+    return 0;
+}
 
 int main(void)
 {
     int blink_status = 0;
     int err = 0;
 
-#if CONFIG_DK_LIBRARY
+    // Configuration peripherals
     configure_gpio();
-#endif
+    configure_pwm();
+
+    // Main peripheral tests
+    err = pwm_rgb_test();
+    if (err < 0) {
+        LOG_ERR("TEST FAILED: PWM test failed");
+    }
+
+    err = gpio_led_test();
+    if (err < 0) {
+        LOG_ERR("TEST FAILED: GPIO test failed");
+    }
+
+    err = battery_test();
+    if (err < 0) {
+        LOG_ERR("TEST FAILED: Battery test failed");
+    }
+
+    err = i2c_max31341_read_device_id_test();
+    if (err < 0) {
+        LOG_ERR("TEST FAILED: I2C test failed");
+    }
+
+    err = i2s_sdcard_test();
+    if (err < 0) {
+        LOG_ERR("TEST FAILED: I2S+SDCARD test failed");
+    }
+
     err = uart_init();
     if (err) {
         error();
@@ -653,6 +1096,8 @@ int main(void)
     for (;;) {
 #if CONFIG_DK_LIBRARY
         dk_set_led(RUN_STATUS_LED, (++blink_status) % 2);
+#else
+        gpiow_set(&led0, (++blink_status) % 2);
 #endif
         k_sleep(K_MSEC(RUN_LED_BLINK_INTERVAL));
     }

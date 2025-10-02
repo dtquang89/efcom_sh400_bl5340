@@ -97,7 +97,7 @@ int main(void)
     while (1) {
         k_sleep(K_MSEC(2000));
 
-        res = sd_card_file_write(filep, TEST_FILE, test_str, strlen(test_str));
+        res = sd_card_file_write(&filep, TEST_FILE, test_str, strlen(test_str));
         if (res != 0) {
             LOG_ERR("Error write file: error %d", res);
             break;

@@ -45,12 +45,20 @@ int gpiow_add_callback(struct gpiow* gw, gpiow_callback_t cb, gpio_flags_t edge)
     return 0;
 }
 
-int gpiow_write(struct gpiow* gw, int value)
+int gpiow_set(struct gpiow* gw, int value)
 {
     if (!gw || gw->dir != GPIOW_DIR_OUTPUT) {
         return -EINVAL;
     }
     return gpio_pin_set_dt(gw->spec, value);
+}
+
+int gpiow_get(struct gpiow* gw, int value)
+{
+    if (!gw || gw->dir != GPIOW_DIR_INPUT) {
+        return -EINVAL;
+    }
+    return gpio_pin_get_dt(gw->spec);
 }
 
 int gpiow_toggle(struct gpiow* gw)
