@@ -130,8 +130,29 @@ const char* disk_mount_pt = DISK_MOUNT_PT;
 #define NUM_BLOCKS            20
 #define BLOCK_SIZE            4 * 1024
 
-static const struct device* dev_i2s = DEVICE_DT_GET(DT_NODELABEL(i2s_rxtx));
+enum player_state {
+    PLAYER_STOPPED,
+    PLAYER_PLAYING,
+    PLAYER_PAUSED,
+};
 
+struct audio_player
+{
+    struct fs_file_t* file;
+    const struct device* i2s_dev;
+    struct k_thread thread;
+    struct k_sem cmd_sem;
+    enum player_state state;
+    bool stop_requested;
+    void (*on_play_start)(void);
+    void (*on_play_stop)(void);
+    void (*on_play_end)(void);
+};
+
+static const struct device* dev_i2s = DEVICE_DT_GET(DT_NODELABEL(i2s_rxtx));
+static struct audio_player player;
+
+K_THREAD_STACK_DEFINE(player_stack, STACKSIZE);
 K_MEM_SLAB_DEFINE(tx_0_mem_slab, BLOCK_SIZE, NUM_BLOCKS, 4);
 
 /* BLE UART variables definition */
@@ -882,6 +903,164 @@ static int i2s_sdcard_test(void)
     return 0;
 }
 
+static int sdcard_init(void)
+{
+    /* raw disk i/o */
+    do {
+        static const char* disk_pdrv = DISK_DRIVE_NAME;
+        uint64_t memory_size_mb;
+        uint32_t block_count;
+        uint32_t block_size;
+
+        if (disk_access_init(disk_pdrv) != 0) {
+            LOG_ERR("Storage init ERROR!");
+            return -EPERM;
+        }
+
+        if (disk_access_status(disk_pdrv) != DISK_STATUS_OK) {
+            LOG_ERR("Disk status not OK!");
+            return -ENODEV;
+        }
+
+        if (disk_access_ioctl(disk_pdrv, DISK_IOCTL_GET_SECTOR_COUNT, &block_count)) {
+            LOG_ERR("Unable to get sector count");
+            return -EINVAL;
+        }
+        LOG_INF("Block count %u", block_count);
+
+        if (disk_access_ioctl(disk_pdrv, DISK_IOCTL_GET_SECTOR_SIZE, &block_size)) {
+            LOG_ERR("Unable to get sector size");
+            return -EINVAL;
+        }
+        LOG_INF("Sector size %u", block_size);
+
+        memory_size_mb = (uint64_t)block_count * block_size;
+        LOG_INF("Memory Size(MB) %u", (uint32_t)(memory_size_mb >> 20));
+    } while (0);
+
+    mp.mnt_point = disk_mount_pt;
+
+    int res = fs_mount(&mp);
+
+    if (res == FR_OK) {
+        LOG_INF("Disk mounted.");
+        res = lsdir(disk_mount_pt);
+        if (res != 0) {
+            LOG_ERR("Error listing disk: err %d", res);
+        }
+    }
+    else {
+        LOG_ERR("Error mounting disk: error %d", res);
+        return -ENXIO;
+    }
+
+    LOG_INF("SDCARD: Init successful!");
+
+    return 0;
+}
+
+void player_thread_fn(void* p1, void* p2, void* p3)
+{
+    struct audio_player* ctx = p1;
+    bool started = false;
+    uint8_t buf_count = 0;
+    int err;
+
+    while (1) {
+        k_sem_take(&ctx->cmd_sem, K_FOREVER);
+
+        if (ctx->state != PLAYER_PLAYING || ctx->stop_requested) {
+            continue;
+        }
+
+        void* tx_block;
+        err = k_mem_slab_alloc(&tx_0_mem_slab, &tx_block, K_FOREVER);
+        if (err)
+            continue;
+
+        int bytes = sd_card_file_read(ctx->file, tx_block, BLOCK_SIZE);
+        if (bytes <= 0) {
+            LOG_INF("End of file reached");
+            k_mem_slab_free(&tx_0_mem_slab, tx_block);
+            if (ctx->on_play_end)
+                ctx->on_play_end();
+            ctx->state = PLAYER_STOPPED;
+            i2s_trigger(ctx->i2s_dev, I2S_DIR_TX, I2S_TRIGGER_STOP);
+            continue;
+        }
+
+        err = i2s_write(ctx->i2s_dev, tx_block, BLOCK_SIZE);
+        if (err) {
+            k_mem_slab_free(&tx_0_mem_slab, tx_block);
+            continue;
+        }
+
+        if (++buf_count == NUMBER_OF_INIT_BUFFER && !started) {
+            started = true;
+            i2s_trigger(ctx->i2s_dev, I2S_DIR_TX, I2S_TRIGGER_START);
+            if (ctx->on_play_start)
+                ctx->on_play_start();
+        }
+
+        if (ctx->stop_requested) {
+            i2s_trigger(ctx->i2s_dev, I2S_DIR_TX, I2S_TRIGGER_STOP);
+            if (ctx->on_play_stop)
+                ctx->on_play_stop();
+            ctx->state = PLAYER_STOPPED;
+        }
+    }
+}
+
+void player_init(const struct device* i2s_dev)
+{
+    player.i2s_dev = i2s_dev;
+    player.state = PLAYER_STOPPED;
+    k_sem_init(&player.cmd_sem, 0, 1);
+
+    k_thread_create(&player.thread, player_stack, K_THREAD_STACK_SIZEOF(player_stack), player_thread_fn, &player, NULL, NULL, 5, 0,
+                    K_NO_WAIT);
+}
+
+void player_set_callbacks(void (*on_start)(void), void (*on_stop)(void), void (*on_end)(void))
+{
+    player.on_play_start = on_start;
+    player.on_play_stop = on_stop;
+    player.on_play_end = on_end;
+}
+
+int player_play(struct fs_file_t* file)
+{
+    if (player.state == PLAYER_PLAYING)
+        return -EBUSY;
+
+    player.file = file;
+    player.stop_requested = false;
+    player.state = PLAYER_PLAYING;
+    k_sem_give(&player.cmd_sem);
+    return 0;
+}
+
+void player_stop(void)
+{
+    player.stop_requested = true;
+    k_sem_give(&player.cmd_sem);
+}
+
+static void player_on_start_cb(void)
+{
+    LOG_INF("Playback started");
+}
+
+static void player_cb_on_stop_cb(void)
+{
+    LOG_INF("Playback stopped");
+}
+
+static void player_cb_on_end_cb(void)
+{
+    LOG_INF("Playback ended");
+}
+
 /**
  * @brief Pre-measurement callback for analog read.
  *
@@ -1047,11 +1226,38 @@ int main(void)
         LOG_ERR("TEST FAILED: I2C test failed");
     }
 
-    err = i2s_sdcard_test();
+    // Original I2S+SDCARD test (blocking mode)
+    // err = i2s_sdcard_test();
+    // if (err < 0) {
+    //     LOG_ERR("TEST FAILED: I2S+SDCARD test failed");
+    // }
+
+    /* Init SD Card*/
+    err = sdcard_init();
+
     if (err < 0) {
-        LOG_ERR("TEST FAILED: I2S+SDCARD test failed");
+        LOG_ERR("SDCard initialization failed");
+        return err;
     }
 
+    /* Init I2S */
+    err = i2s_init();
+
+    if (err < 0) {
+        LOG_ERR("I2S initialization failed");
+        return err;
+    }
+
+    /* Init I2S player */
+    player_init(dev_i2s);
+    // Register player callbacks
+    player_set_callbacks(player_on_start_cb, player_cb_on_stop_cb, player_cb_on_end_cb);
+
+    // Open a file from SD Card
+    sd_card_file_open(&filep, TEST_FILE, 44);  // Skip WAV header, 44 bytes
+    player_play(&filep);
+
+    /* Init UART */
     err = uart_init();
     if (err) {
         error();
