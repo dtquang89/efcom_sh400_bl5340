@@ -42,17 +42,33 @@ int check_file_dir_exists(const char* path);
  * @param text_str_size Size of the text string.
  * @return 0 on success, negative error code on failure.
  */
-int sd_card_file_write(struct fs_file_t file, const char* file_path, char* text_str, size_t text_str_size);
+int sd_card_file_write(struct fs_file_t* file, const char* file_path, char* text_str, size_t text_str_size);
 
 /**
  * @brief Read text from a file on the SD card.
  *
  * @param file File structure.
- * @param file_path Path to the file.
- * @param text_str Buffer to store read text.
- * @param text_str_size Size of the buffer.
+ * @param buffer Buffer to store read text.
+ * @param size Size of the buffer.
  * @return Number of bytes read on success, negative error code on failure.
  */
-int sd_card_file_read(struct fs_file_t file, const char* file_path, char* text_str, size_t text_str_size);
+int sd_card_file_read(struct fs_file_t* file, void* buffer, size_t size);
+
+/**
+ * @brief Close an open file on the SD card.
+ *
+ * @param file File structure.
+ * @param file_path Path to the file.
+ * @param skip_bytes Number of bytes to skip from the start.
+ * @return 0 on success, negative error code on failure.
+ */
+int sd_card_file_open(struct fs_file_t* file, const char* file_path, off_t skip_bytes);
+
+/**
+ * @brief Close an open file on the SD card.
+ *
+ * @param file File structure to close.
+ */
+void sd_card_file_close(struct fs_file_t* file);
 
 #endif

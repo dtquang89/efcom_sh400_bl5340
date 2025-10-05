@@ -63,13 +63,21 @@ int gpiow_init(struct gpiow* gw, const struct gpio_dt_spec* spec, gpiow_dir_t di
 int gpiow_add_callback(struct gpiow* gw, gpiow_callback_t cb, gpio_flags_t edge);
 
 /**
- * @brief Write output pin.
+ * @brief Set output pin.
  *
  * @param gw    Pointer to wrapper instance
  * @param value Value to write (0 or 1)
  * @return 0 on success, negative errno otherwise
  */
-int gpiow_write(struct gpiow* gw, int value);
+int gpiow_set(struct gpiow* gw, int value);
+
+/**
+ * @brief Get input pin.
+ *
+ * @param gw    Pointer to wrapper instance
+ * @return input value, negative errno otherwise
+ */
+int gpiow_get(struct gpiow* gw, int value);
 
 /**
  * @brief Toggle output pin.
